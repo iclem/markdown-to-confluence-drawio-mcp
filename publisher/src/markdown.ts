@@ -5,6 +5,7 @@ export type MarkdownBlock =
   | { type: "paragraph"; text: string }
   | { type: "blockquote"; text: string }
   | { type: "bulletList"; items: string[] }
+  | { type: "orderedList"; items: string[]; start: number }
   | { type: "table"; header: string[]; rows: string[][] }
   | { type: "rule" }
   | { type: "code"; language?: string; text: string }
@@ -58,6 +59,17 @@ export function buildHeadingNode(level: number, text: string): JsonObject {
 export function buildBulletListNode(items: string[]): JsonObject {
   return {
     type: "bulletList",
+    content: items.map((item) => ({
+      type: "listItem",
+      content: [buildParagraphNode(item)],
+    })),
+  };
+}
+
+export function buildOrderedListNode(items: string[], start = 1): JsonObject {
+  return {
+    type: "orderedList",
+    attrs: { order: start },
     content: items.map((item) => ({
       type: "listItem",
       content: [buildParagraphNode(item)],
@@ -123,6 +135,8 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
   let paragraph: string[] = [];
   let blockquote: string[] = [];
   let bullets: string[] = [];
+  let orderedItems: string[] = [];
+  let orderedStart = 1;
   let inFence = false;
   let fenceLanguage = "";
   let fenceLines: string[] = [];
@@ -138,6 +152,14 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
     if (bullets.length > 0) {
       blocks.push({ type: "bulletList", items: bullets });
       bullets = [];
+    }
+  };
+
+  const flushOrdered = (): void => {
+    if (orderedItems.length > 0) {
+      blocks.push({ type: "orderedList", items: orderedItems, start: orderedStart });
+      orderedItems = [];
+      orderedStart = 1;
     }
   };
 
@@ -171,6 +193,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
       flushParagraph();
       flushBlockquote();
       flushBullets();
+      flushOrdered();
       inFence = true;
       fenceLanguage = trimmed.slice(3).trim();
       fenceLines = [];
@@ -181,6 +204,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
       flushParagraph();
       flushBlockquote();
       flushBullets();
+      flushOrdered();
       continue;
     }
 
@@ -188,6 +212,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
       flushParagraph();
       flushBlockquote();
       flushBullets();
+      flushOrdered();
       blocks.push({ type: "rule" });
       continue;
     }
@@ -197,6 +222,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
       flushParagraph();
       flushBlockquote();
       flushBullets();
+      flushOrdered();
       blocks.push({
         type: "heading",
         level: headingMatch[1].length,
@@ -209,7 +235,20 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
     if (bulletMatch) {
       flushParagraph();
       flushBlockquote();
+      flushOrdered();
       bullets.push(bulletMatch[1]);
+      continue;
+    }
+
+    const orderedMatch = /^(\d+)\.\s+(.*)$/.exec(trimmed);
+    if (orderedMatch) {
+      flushParagraph();
+      flushBlockquote();
+      flushBullets();
+      if (orderedItems.length === 0) {
+        orderedStart = Number(orderedMatch[1]);
+      }
+      orderedItems.push(orderedMatch[2]);
       continue;
     }
 
@@ -217,8 +256,20 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
     if (blockquoteMatch) {
       flushParagraph();
       flushBullets();
+      flushOrdered();
       blockquote.push(blockquoteMatch[1]);
       continue;
+    }
+
+    if (/^(?:\t| {2,})\S/.test(line)) {
+      if (orderedItems.length > 0) {
+        orderedItems[orderedItems.length - 1] = `${orderedItems[orderedItems.length - 1]} ${trimmed}`;
+        continue;
+      }
+      if (bullets.length > 0) {
+        bullets[bullets.length - 1] = `${bullets[bullets.length - 1]} ${trimmed}`;
+        continue;
+      }
     }
 
     const nextLine = lines[index + 1]?.trim() ?? "";
@@ -226,6 +277,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
       flushParagraph();
       flushBlockquote();
       flushBullets();
+      flushOrdered();
 
       const header = splitMarkdownTableRow(trimmed);
       const rows: string[][] = [];
@@ -245,6 +297,7 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
     }
 
     flushBullets();
+    flushOrdered();
     flushBlockquote();
     paragraph.push(trimmed);
   }
@@ -252,5 +305,6 @@ export function parseMarkdown(markdown: string): MarkdownBlock[] {
   flushParagraph();
   flushBlockquote();
   flushBullets();
+  flushOrdered();
   return blocks;
 }
