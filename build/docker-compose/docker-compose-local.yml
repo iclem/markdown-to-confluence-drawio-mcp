@@ -47,7 +47,7 @@ services:
     command:
       - mcp-http
     environment:
-      MCP_HOST: ${MCP_HOST:-127.0.0.1}
+      MCP_HOST: ${MCP_HOST:-0.0.0.0}
       MCP_PORT: ${MCP_PORT:-3000}
       CONFLUENCE_BASE_URL: ${CONFLUENCE_BASE_URL:-}
       CONFLUENCE_EMAIL: ${CONFLUENCE_EMAIL:-}

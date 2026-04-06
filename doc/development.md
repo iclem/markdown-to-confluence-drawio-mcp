@@ -277,7 +277,7 @@ This runs the default `mcp` entrypoint in the packaged image.
 
 ```bash
 docker run --rm -p 3000:3000 \
-  -e MCP_HOST=127.0.0.1 \
+  -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=3000 \
   -e COPILOT_MCP_CONFLUENCE_URL \
   -e COPILOT_MCP_CONFLUENCE_USERNAME \
@@ -286,6 +286,8 @@ docker run --rm -p 3000:3000 \
 ```
 
 The Streamable HTTP endpoint is served at `/mcp`, with a simple health check at `/healthz`.
+
+When the server runs in Docker, bind it to `0.0.0.0` inside the container so the host port mapping can reach it. Client registrations on the host should still use `http://127.0.0.1:3000/mcp`.
 
 The equivalent compose command is:
 
