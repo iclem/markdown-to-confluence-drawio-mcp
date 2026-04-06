@@ -1,4 +1,4 @@
-# Mermaid to Draw.io Architecture
+# Markdown to Confluence Draw.io MCP Architecture
 
 This document describes the implemented runtime shape for Mermaid-to-draw.io conversion and Confluence publication.
 
@@ -128,13 +128,13 @@ The packaged runtime is one Docker image containing:
 The default container entrypoint starts the stdio MCP server:
 
 ```text
-mermaid-to-drawio:local mcp
+markdown-to-confluence-drawio-mcp:local mcp
 ```
 
 The same image can also start the HTTP MCP server:
 
 ```text
-mermaid-to-drawio:local mcp-http
+markdown-to-confluence-drawio-mcp:local mcp-http
 ```
 
 and utility commands:

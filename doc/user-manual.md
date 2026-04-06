@@ -1,4 +1,4 @@
-# Mermaid to Draw.io User Manual
+# Markdown to Confluence Draw.io MCP User Manual
 
 This manual covers installation, runtime setup, and the most common operator workflows for the draw.io + Confluence MCP server.
 
@@ -28,7 +28,7 @@ The MCP server exposes a product-oriented tool surface for:
 
 ## Build the image
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 make image-mcp
@@ -49,7 +49,7 @@ docker run --rm \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
-  mermaid-to-drawio:local mcp-http
+  markdown-to-confluence-drawio-mcp:local mcp-http
 ```
 
 Endpoint:
@@ -73,7 +73,7 @@ docker run --rm -i \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
-  mermaid-to-drawio:local mcp
+  markdown-to-confluence-drawio-mcp:local mcp
 ```
 
 ## Provider installation
@@ -91,7 +91,7 @@ Recommended local HTTP registration:
 ```json
 {
   "mcpServers": {
-    "mermaid-to-drawio": {
+    "markdown-to-confluence-drawio-mcp": {
       "type": "http",
       "url": "http://127.0.0.1:3000/mcp"
     }
@@ -102,7 +102,7 @@ Recommended local HTTP registration:
 For GitHub Copilot cloud agents, start from the repository-root example:
 
 ```text
-.github/copilot/cloud-agent/mermaid-to-drawio.json
+.github/copilot/cloud-agent/markdown-to-confluence-drawio-mcp.json
 ```
 
 That checked-in example uses the packaged Docker image with stdio transport.
@@ -118,7 +118,7 @@ Typical global config file:
 Example registration:
 
 ```toml
-[mcp_servers.mermaid-to-drawio]
+[mcp_servers.markdown-to-confluence-drawio-mcp]
 url = "http://127.0.0.1:3000/mcp"
 ```
 
@@ -135,7 +135,7 @@ Claude Code and Claude Desktop both use a JSON `mcpServers` definition. The easi
 ```json
 {
   "mcpServers": {
-    "mermaid-to-drawio": {
+    "markdown-to-confluence-drawio-mcp": {
       "url": "http://127.0.0.1:3000/mcp"
     }
   }
@@ -164,7 +164,7 @@ Example registration:
 ```json
 {
   "mcpServers": {
-    "mermaid-to-drawio": {
+    "markdown-to-confluence-drawio-mcp": {
       "httpUrl": "http://127.0.0.1:3000/mcp",
       "trust": true
     }

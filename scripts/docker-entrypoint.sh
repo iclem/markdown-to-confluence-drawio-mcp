@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="${MERMAID_TO_DRAWIO_HOME:-/app}"
+ROOT_DIR="${MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_HOME:-/app}"
 COMMAND="${1:-mcp}"
 
 case "${COMMAND}" in
@@ -31,7 +31,7 @@ case "${COMMAND}" in
     ;;
   *)
     cat >&2 <<'EOF'
-Usage: mermaid-to-drawio [mcp|mcp-http|publisher-cli|convert|test|shell] ...
+Usage: markdown-to-confluence-drawio-mcp [mcp|mcp-http|publisher-cli|convert|test|shell] ...
 
 Commands:
   mcp            Run the Confluence + draw.io MCP server (default).

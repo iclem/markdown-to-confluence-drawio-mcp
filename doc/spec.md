@@ -1,4 +1,4 @@
-# Mermaid to Draw.io Converter Specification
+# Markdown to Confluence Draw.io MCP Specification
 
 ## Objective
 
@@ -45,7 +45,7 @@ For the current implementation status by Mermaid diagram family and by flowchart
 
 ### Tool name
 
-`mermaid_to_drawio`
+`convert_mermaid_to_drawio`
 
 ### Input
 

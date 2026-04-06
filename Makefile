@@ -27,4 +27,4 @@ test-e2e:
 	$(DEV_RUN) 'cd /app && ./scripts/test-e2e.sh'
 
 image-mcp:
-	docker build -t mermaid-to-drawio:local .
+	docker build -t markdown-to-confluence-drawio-mcp:local .
