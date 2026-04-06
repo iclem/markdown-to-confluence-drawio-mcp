@@ -20,11 +20,16 @@ The MCP server exposes a product-oriented tool surface for:
 
 - Docker
 - access to a Confluence Cloud tenant with the draw.io app installed
-- Confluence credentials via:
-  - `CONFLUENCE_BASE_URL` plus either
-    - `CONFLUENCE_EMAIL` and `CONFLUENCE_API_TOKEN`, or
-    - `CONFLUENCE_BEARER_TOKEN`
-  - or the equivalent `COPILOT_MCP_CONFLUENCE_*` variables
+- Confluence credentials via one of these explicit sets:
+  - direct publisher variables:
+    - `CONFLUENCE_BASE_URL`
+    - plus either:
+      - `CONFLUENCE_EMAIL` and `CONFLUENCE_API_TOKEN`, or
+      - `CONFLUENCE_BEARER_TOKEN`
+  - Copilot-style fallback variables:
+    - `COPILOT_MCP_CONFLUENCE_URL`
+    - `COPILOT_MCP_CONFLUENCE_USERNAME`
+    - `COPILOT_MCP_CONFLUENCE_API_TOKEN`
 
 ## Build the image
 
@@ -44,12 +49,24 @@ HTTP is the best default for local agent integrations because one container can 
 docker run --rm \
   -p 3000:3000 \
   -v "$PWD":"$PWD" \
-  -e MCP_HOST=0.0.0.0 \
+  -e MCP_HOST=127.0.0.1 \
   -e MCP_PORT=3000 \
-  -e CONFLUENCE_BASE_URL \
-  -e CONFLUENCE_EMAIL \
-  -e CONFLUENCE_API_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local mcp-http
+```
+
+Or start the equivalent compose service from the repository root:
+
+```bash
+docker compose -f build/docker-compose/docker-compose-local.yml up mcp-http
+```
+
+Equivalent Make target:
+
+```bash
+make mcp-http
 ```
 
 Endpoint:
@@ -136,6 +153,7 @@ Claude Code and Claude Desktop both use a JSON `mcpServers` definition. The easi
 {
   "mcpServers": {
     "markdown-to-confluence-drawio-mcp": {
+      "type": "http",
       "url": "http://127.0.0.1:3000/mcp"
     }
   }
