@@ -98,6 +98,8 @@ Example request shape:
 
 - `create_confluence_page_from_markdown_file` for large Markdown files already on disk
 - `create_confluence_page_from_markdown` when the Markdown is generated in memory
+- `update_confluence_page_from_markdown_file` to republish an existing page directly from a Markdown file
+- `update_confluence_page_from_markdown` to republish an existing page from Markdown already in memory
 - `create_confluence_drawio_widget_from_mermaid` to add a single new widget to an existing page
 - `update_confluence_drawio_widget_from_mermaid` to replace an existing widget in place
 - `inspect_confluence_drawio_page` to inspect current page/widget state before updating it

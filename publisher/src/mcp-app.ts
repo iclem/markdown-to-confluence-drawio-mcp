@@ -158,6 +158,50 @@ export function createMcpServer(): McpServer {
   );
 
   server.tool(
+    "update_confluence_page_from_markdown",
+    "Update an existing Confluence page from Markdown content, converting Mermaid blocks to draw.io widgets where possible and falling back per block when conversion fails.",
+    {
+      pageId: z.string().describe("Target Confluence page ID."),
+      markdown: z.string().describe("Markdown document to publish into the existing page."),
+      sourceName: z.string().optional().describe("Optional source file name used in publication metadata."),
+      spaceKey: z.string().optional().describe("Optional Confluence space key for draw.io macro metadata."),
+    },
+    async ({ pageId, markdown, sourceName, spaceKey }) => {
+      const service = createPublisherService();
+      return textResult(
+        await service.updatePageFromMarkdown({
+          pageId,
+          markdown,
+          sourceName,
+          spaceKey,
+        }),
+      );
+    },
+  );
+
+  server.tool(
+    "update_confluence_page_from_markdown_file",
+    "Update an existing Confluence page from a Markdown file path, converting Mermaid blocks to draw.io widgets where possible and falling back per block when conversion fails.",
+    {
+      pageId: z.string().describe("Target Confluence page ID."),
+      markdownFile: z.string().describe("Path to the Markdown document to publish into the existing page."),
+      sourceName: z.string().optional().describe("Optional source file name used in publication metadata."),
+      spaceKey: z.string().optional().describe("Optional Confluence space key for draw.io macro metadata."),
+    },
+    async ({ pageId, markdownFile, sourceName, spaceKey }) => {
+      const service = createPublisherService();
+      return textResult(
+        await service.updatePageFromMarkdownFile({
+          pageId,
+          markdownFile,
+          sourceName,
+          spaceKey,
+        }),
+      );
+    },
+  );
+
+  server.tool(
     "update_confluence_drawio_widget_from_mermaid",
     "Convert Mermaid to draw.io and update an existing draw.io widget in place on a Confluence page.",
     {

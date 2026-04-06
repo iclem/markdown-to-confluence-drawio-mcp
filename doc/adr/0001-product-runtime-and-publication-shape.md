@@ -124,6 +124,8 @@ The MCP server exposes both:
 
 - `create_confluence_page_from_markdown`
 - `create_confluence_page_from_markdown_file`
+- `update_confluence_page_from_markdown`
+- `update_confluence_page_from_markdown_file`
 
 The file-based variant exists to reduce token usage and avoid forcing agents to load full Markdown bodies into model context before publishing.
 

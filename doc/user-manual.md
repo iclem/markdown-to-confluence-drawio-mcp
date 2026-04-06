@@ -202,6 +202,8 @@ and send the Markdown body directly instead.
 | `inspect_confluence_drawio_page` | You want to inspect draw.io widgets, attachments, and custom content on an existing page |
 | `create_confluence_page_from_markdown` | The Markdown content is already in memory |
 | `create_confluence_page_from_markdown_file` | The Markdown already exists on disk and you want to avoid sending it through model context |
+| `update_confluence_page_from_markdown` | You want to replace an existing page body from Markdown already in memory |
+| `update_confluence_page_from_markdown_file` | You want to republish an existing page directly from a Markdown file on disk |
 | `create_confluence_drawio_widget_from_mermaid` | You want to add one new draw.io widget to an existing page |
 | `update_confluence_drawio_widget_from_mermaid` | You want to replace an existing widget without recreating the page |
 | `append_confluence_page_paragraph` | You want a small text-only page edit |
@@ -214,12 +216,13 @@ Use one of:
 
 - `create_confluence_page_from_markdown`
 - `create_confluence_page_from_markdown_file`
+- `update_confluence_page_from_markdown`
+- `update_confluence_page_from_markdown_file`
 
 Provide:
 
-- `title`
-- either `spaceId` or `siblingPageId`
-- optional `parentId`
+- `title` plus either `spaceId` or `siblingPageId` for page creation
+- or `pageId` for in-place page updates
 - optional `spaceKey`
 
 The publisher:
@@ -259,6 +262,7 @@ Select the target widget by:
 ## Example prompts for agents
 
 - "Publish `/absolute/path/to/your-project/docs/domain-context-map.md` as a sibling of page `123456` using `create_confluence_page_from_markdown_file`."
+- "Republish page `123456` from `/absolute/path/to/your-project/docs/domain-context-map.md` using `update_confluence_page_from_markdown_file`."
 - "Create a new widget called `context-map.drawio` on page `123456` from this Mermaid block."
 - "Inspect page `123456` and then update the widget named `context-map.drawio` from this Mermaid source."
 - "Create a new Confluence page titled `Architecture Validation` from this Markdown body and keep Mermaid fallbacks if conversion fails."
