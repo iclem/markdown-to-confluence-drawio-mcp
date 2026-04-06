@@ -504,6 +504,26 @@ write use case"]
     expect(diagram.sequenceFrames).toEqual([]);
   });
 
+  it("keeps semicolons inside sequence note text", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        sequenceDiagram
+        participant MCI as Merchant Catalogue Intake
+        participant AC as api-catalogue
+        Note over MCI,AC: Ownership mode determines routing: legacy_batch → EP7 bridge still; api_canonical → this path
+      `,
+    });
+
+    expect(diagram.sequenceNotes).toEqual([
+      {
+        order: 0,
+        participantIds: ["MCI", "AC"],
+        label: "Ownership mode determines routing: legacy_batch → EP7 bridge still; api_canonical → this path",
+        placement: "over",
+      },
+    ]);
+  });
+
   it("parses explicit activation and deactivation bars", () => {
     const diagram = parseMermaid({
       mermaid: `

@@ -13,7 +13,7 @@ interface ParsedArgs {
 }
 
 export const CLI_USAGE =
-  "Usage: cli.js <inspect-page|update-widget|create-widget|create-page-from-markdown> " +
+  "Usage: cli.js <inspect-page|update-widget|create-widget|create-page-from-markdown|update-page-from-markdown> " +
   "--base-url <https://site.atlassian.net> " +
   "[--bearer-token <token> | --email <email> --api-token <token>] ...";
 
@@ -128,6 +128,23 @@ async function main(): Promise<void> {
       spaceId: options.get("space-id"),
       parentId: options.get("parent-id"),
       siblingPageId: options.get("sibling-page-id"),
+      spaceKey: options.get("space-key"),
+    });
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return;
+  }
+
+  if (command === "update-page-from-markdown") {
+    const markdown =
+      options.get("markdown") ??
+      (options.get("markdown-file") ? readFileSync(options.get("markdown-file")!, "utf8") : undefined);
+    if (!markdown) {
+      throw new Error("Provide --markdown or --markdown-file");
+    }
+    const result = await service.updatePageFromMarkdown({
+      pageId: requireOption(options, "page-id"),
+      markdown,
+      sourceName: options.get("source-name") ?? options.get("markdown-file"),
       spaceKey: options.get("space-key"),
     });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);

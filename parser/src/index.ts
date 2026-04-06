@@ -296,13 +296,13 @@ function splitTopLevel(input: string, separator: string): string[] {
   return result;
 }
 
-function normalizeLines(mermaid: string): string[] {
+function normalizeLines(mermaid: string, splitSemicolons = false): string[] {
   const statements: string[] = [];
   let current = "";
   let state = createScanState();
 
   for (const char of mermaid.replace(/\r/g, "")) {
-    if ((char === "\n" || char === ";") && isTopLevel(state)) {
+    if ((char === "\n" || (splitSemicolons && char === ";")) && isTopLevel(state)) {
       const statement = current.trim();
       if (statement.length > 0 && !statement.startsWith("%%")) {
         statements.push(statement);
@@ -1875,12 +1875,19 @@ function parseSequence(request: MermaidParseRequest, lines: string[]): Intermedi
 }
 
 export function parseMermaid(request: MermaidParseRequest): IntermediateDiagram {
-  const lines = normalizeLines(request.mermaid);
+  const rawLines = normalizeLines(request.mermaid);
+  if (rawLines.length === 0) {
+    throw new Error("parse_error: Mermaid input is empty");
+  }
+
+  const header = parseHeader(rawLines[0]);
+  const lines = header.diagramType === "flowchart"
+    ? normalizeLines(request.mermaid, true)
+    : rawLines;
   if (lines.length === 0) {
     throw new Error("parse_error: Mermaid input is empty");
   }
 
-  const header = parseHeader(lines[0]);
   if (header.diagramType === "sequence") {
     return parseSequence(request, lines);
   }
