@@ -165,8 +165,8 @@ and utility commands:
 
 ### 3. Markdown publication
 
-1. MCP client calls `create_confluence_page_from_markdown` or `create_confluence_page_from_markdown_file`
-2. the publisher creates the target page
+1. MCP client calls `create_confluence_page_from_markdown`, `create_confluence_page_from_markdown_file`, `update_confluence_page_from_markdown`, or `update_confluence_page_from_markdown_file`
+2. the publisher creates the target page or loads the existing page to republish
 3. `publisher/src/markdown.ts` parses Markdown into block-level content
 4. normal text blocks are mapped to Confluence ADF nodes
 5. each Mermaid block is converted to draw.io when possible
@@ -188,7 +188,7 @@ This matches current agent-host expectations better than a sessionful HTTP MCP f
 
 ## File-based publication model
 
-`create_confluence_page_from_markdown_file` reads the Markdown file on the **server side**.
+`create_confluence_page_from_markdown_file` and `update_confluence_page_from_markdown_file` read the Markdown file on the **server side**.
 
 That is useful because it avoids copying a large document into agent context first, but it introduces an operational boundary:
 

@@ -289,6 +289,8 @@ The server currently exposes:
 - `append_confluence_page_paragraph`
 - `create_confluence_page_from_markdown`
 - `create_confluence_page_from_markdown_file`
+- `update_confluence_page_from_markdown`
+- `update_confluence_page_from_markdown_file`
 - `create_confluence_drawio_widget_from_mermaid`
 - `update_confluence_drawio_widget_from_mermaid`
 
@@ -297,7 +299,7 @@ These tools:
 - authenticate using the same `CONFLUENCE_*` or `COPILOT_MCP_CONFLUENCE_*` environment variables
 - convert Mermaid to `.drawio` inside the container
 - create or update draw.io widgets on Confluence pages
-- can create a new page from Markdown content or from a Markdown file path and convert multiple Mermaid blocks with fallback to Mermaid code blocks when conversion fails
+- can create or update a page from Markdown content or from a Markdown file path and convert multiple Mermaid blocks with fallback to Mermaid code blocks when conversion fails
 
 ### Current limitation
 
