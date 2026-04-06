@@ -1,0 +1,9 @@
+doc/
+parser/node_modules/
+parser/dist/
+publisher/node_modules/
+publisher/dist/
+generator/target/
+output/
+__publish__*.md
+*.publish-*.md

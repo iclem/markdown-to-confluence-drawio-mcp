@@ -1,0 +1,22 @@
+graph TD
+    A["Shadow mode live
+(legacy sole applier)"]
+    B["product_count update"]
+    C["statistics update"]
+    D["views refresh"]
+    E["category normalization"]
+    F["segment refresh"]
+    G["search and replace"]
+    H["feed regeneration request"]
+    I["Legacy seam removal
+(EP8)"]
+
+    A -->|"parity >= 99.99%"| B
+    B -->|"parity >= 99.99%"| C
+    C -->|"parity >= 99.99%"| D
+    D -->|"parity >= 99.99%"| E
+    E -->|"parity >= 99.99%"| F
+    F -->|"parity >= 99.99%"| G
+    G -->|"parity >= 99.99%"| H
+    H -->|"output parity >= 99.9%
+Gate D met"| I

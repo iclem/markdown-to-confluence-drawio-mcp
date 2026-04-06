@@ -1,0 +1,636 @@
+import { describe, expect, it } from "vitest";
+
+import { parseMermaid } from "./index.js";
+
+function stripLayout<T extends { x?: number; y?: number; width?: number; height?: number }>(node: T) {
+  const { x: _x, y: _y, width: _width, height: _height, ...rest } = node;
+  return rest;
+}
+
+function stripEdgePoints<T extends { points?: unknown }>(edge: T) {
+  const { points: _points, ...rest } = edge;
+  return rest;
+}
+
+describe("parseMermaid", () => {
+  it("parses supported flowchart syntax into the intermediate model", () => {
+    const diagram = parseMermaid({
+      sourceName: "sample.mermaid",
+      mermaid: `
+        flowchart LR
+        A[Start] -->|yes| B{Decision}
+        B --- C((Done))
+      `,
+    });
+
+    expect(diagram.pageName).toBe("sample");
+    expect(diagram.diagramType).toBe("flowchart");
+    expect(diagram.direction).toBe("LR");
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "A", label: "Start", shape: "rectangle" },
+      { id: "B", label: "Decision", shape: "rhombus" },
+      { id: "C", label: "Done", shape: "ellipse" },
+    ]);
+    for (const node of diagram.nodes) {
+      expect(node.x).toBeTypeOf("number");
+      expect(node.y).toBeTypeOf("number");
+      expect(node.width).toBeTypeOf("number");
+      expect(node.height).toBeTypeOf("number");
+    }
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      { sourceId: "A", targetId: "B", label: "yes", kind: "directed" },
+      { sourceId: "B", targetId: "C", label: undefined, kind: "plain" },
+    ]);
+    for (const edge of diagram.edges) {
+      expect(edge.points?.length ?? 0).toBeGreaterThan(1);
+    }
+    expect(diagram.subgraphs).toEqual([]);
+  });
+
+  it("creates implicit rectangle nodes from bare identifiers", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        graph TD
+        Alpha --> Beta
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "Alpha", label: "Alpha", shape: "rectangle" },
+      { id: "Beta", label: "Beta", shape: "rectangle" },
+    ]);
+  });
+
+  it("preserves class-based node colors from classDef directives and suffixes", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        flowchart TD
+        classDef danger fill:#ffdddd,stroke:#ff0000,color:#330000
+        A[Start]:::danger --> B{Decision}:::danger
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      {
+        id: "A",
+        label: "Start",
+        shape: "rectangle",
+        fillColor: "#ffdddd",
+        strokeColor: "#ff0000",
+        fontColor: "#330000",
+      },
+      {
+        id: "B",
+        label: "Decision",
+        shape: "rhombus",
+        fillColor: "#ffdddd",
+        strokeColor: "#ff0000",
+        fontColor: "#330000",
+      },
+    ]);
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      { sourceId: "A", targetId: "B", label: undefined, kind: "directed" },
+    ]);
+    expect(diagram.warnings).toEqual([]);
+  });
+
+  it("preserves rgb and rgba values in classDef directives", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        flowchart TD
+        classDef themed fill:rgb(230, 240, 255),stroke:rgba(25, 113, 194, 0.8),color:rgb(10, 20, 30)
+        A[Start]:::themed --> B[Finish]:::themed
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      {
+        id: "A",
+        label: "Start",
+        shape: "rectangle",
+        fillColor: "rgb(230, 240, 255)",
+        strokeColor: "rgba(25, 113, 194, 0.8)",
+        fontColor: "rgb(10, 20, 30)",
+      },
+      {
+        id: "B",
+        label: "Finish",
+        shape: "rectangle",
+        fillColor: "rgb(230, 240, 255)",
+        strokeColor: "rgba(25, 113, 194, 0.8)",
+        fontColor: "rgb(10, 20, 30)",
+      },
+    ]);
+  });
+
+  it("applies class assignments declared separately from node definitions", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        flowchart TD
+        A[Start] --> B[Finish]
+        classDef success fill:#ddffdd,stroke:#00aa00,color:#003300
+        class A,B success
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      {
+        id: "A",
+        label: "Start",
+        shape: "rectangle",
+        fillColor: "#ddffdd",
+        strokeColor: "#00aa00",
+        fontColor: "#003300",
+      },
+      {
+        id: "B",
+        label: "Finish",
+        shape: "rectangle",
+        fillColor: "#ddffdd",
+        strokeColor: "#00aa00",
+        fontColor: "#003300",
+      },
+    ]);
+  });
+
+  it("rejects unsupported sequence constructs explicitly", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          sequenceDiagram
+          alt Branch
+            A->>B: Message
+          end
+        `,
+      }),
+    ).toThrow(/unsupported_construct/);
+  });
+
+  it("supports semicolon-separated statements and chained edges", () => {
+    const diagram = parseMermaid({
+      sourceName: "chain.mermaid",
+      mermaid: `
+        flowchart TD
+        A[Start]; B{Check}; C((Done))
+        A --> B -->|ok| C
+      `,
+    });
+
+    expect(diagram.pageName).toBe("chain");
+    expect(diagram.direction).toBe("TD");
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "A", label: "Start", shape: "rectangle" },
+      { id: "B", label: "Check", shape: "rhombus" },
+      { id: "C", label: "Done", shape: "ellipse" },
+    ]);
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      { sourceId: "A", targetId: "B", label: undefined, kind: "directed" },
+      { sourceId: "B", targetId: "C", label: "ok", kind: "directed" },
+    ]);
+  });
+
+  it("supports branch targets with ampersands across chained edges", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        flowchart TD
+        A[Start] --> B{Check} & C(Retry) --> D((Done))
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "A", label: "Start", shape: "rectangle" },
+      { id: "B", label: "Check", shape: "rhombus" },
+      { id: "C", label: "Retry", shape: "rounded-rectangle" },
+      { id: "D", label: "Done", shape: "ellipse" },
+    ]);
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      { sourceId: "A", targetId: "B", label: undefined, kind: "directed" },
+      { sourceId: "A", targetId: "C", label: undefined, kind: "directed" },
+      { sourceId: "B", targetId: "D", label: undefined, kind: "directed" },
+      { sourceId: "C", targetId: "D", label: undefined, kind: "directed" },
+    ]);
+  });
+
+  it("supports subgraphs and quoted multiline labels", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        graph TB
+          subgraph "Product Write Path"
+            AC["api-catalogue
+write use case"]
+            OB["Outbox table
+(PostgreSQL)"]
+          end
+          AC --> OB
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "AC", label: "api-catalogue\nwrite use case", shape: "rectangle" },
+      { id: "OB", label: "Outbox table\n(PostgreSQL)", shape: "rectangle" },
+    ]);
+    expect(diagram.subgraphs).toEqual([
+      {
+        id: "subgraph-1",
+        label: "Product Write Path",
+        nodeIds: ["AC", "OB"],
+        parentId: undefined,
+      },
+    ]);
+  });
+
+  it("supports alternate quoted edge-label syntax", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        graph TD
+        A["Shadow mode live
+(legacy sole applier)"]
+        B["product_count update"]
+        A -- "parity >= 99.99%" --> B
+      `,
+    });
+
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      {
+        sourceId: "A",
+        targetId: "B",
+        label: "parity >= 99.99%",
+        kind: "directed",
+      },
+    ]);
+  });
+
+  it("supports dotted directed edges", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        graph TD
+        A[Start] -.->|eventual| B[Later]
+      `,
+    });
+
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      {
+        sourceId: "A",
+        targetId: "B",
+        label: "eventual",
+        kind: "dashed-directed",
+      },
+    ]);
+  });
+
+  it("converts literal escaped newline sequences into multiline labels", () => {
+    const diagram = parseMermaid({
+      mermaid: String.raw`
+        graph TD
+        A["Line 1\nLine 2"] --> B["Other\nNode"]
+      `,
+    });
+
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "A", label: "Line 1\nLine 2", shape: "rectangle" },
+      { id: "B", label: "Other\nNode", shape: "rectangle" },
+    ]);
+  });
+
+  it("parses a narrow stateDiagram-v2 slice with notes", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        stateDiagram-v2
+        [*] --> LegacyOnly : start here
+        LegacyOnly --> EventDriven : all capabilities cut over
+        EventDriven --> [*]
+        note right of LegacyOnly
+          Legacy path: sole production writer
+          New path: computes but does not apply
+        end note
+      `,
+    });
+
+    expect(diagram.diagramType).toBe("state");
+    expect(diagram.direction).toBe("TD");
+    expect(diagram.nodes.map(stripLayout)).toEqual([
+      { id: "__state_start__", label: "Start", shape: "ellipse" },
+      { id: "LegacyOnly", label: "LegacyOnly", shape: "rounded-rectangle" },
+      { id: "EventDriven", label: "EventDriven", shape: "rounded-rectangle" },
+      { id: "__state_end__", label: "End", shape: "ellipse" },
+      {
+        id: "state-note-1",
+        label: "Legacy path: sole production writer\nNew path: computes but does not apply",
+        shape: "rectangle",
+        fillColor: "#fff3bf",
+        strokeColor: "#f08c00",
+        fontColor: "#333333",
+      },
+    ]);
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      { sourceId: "__state_start__", targetId: "LegacyOnly", label: "start here", kind: "directed" },
+      { sourceId: "LegacyOnly", targetId: "EventDriven", label: "all capabilities cut over", kind: "directed" },
+      { sourceId: "EventDriven", targetId: "__state_end__", label: undefined, kind: "directed" },
+      { sourceId: "LegacyOnly", targetId: "state-note-1", label: undefined, kind: "plain" },
+    ]);
+
+    const noteNode = diagram.nodes.find((node) => node.id === "state-note-1");
+    expect(noteNode?.width).toBe(295);
+    expect(noteNode?.height).toBe(64);
+  });
+
+  it("honors explicit state diagram direction declarations", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        stateDiagram-v2
+        direction LR
+        [*] --> A
+        A --> [*]
+      `,
+    });
+
+    expect(diagram.direction).toBe("LR");
+  });
+
+  it("parses a gantt slice with quarter headers and month-aligned task starts", () => {
+    const diagram = parseMermaid({
+      sourceName: "delivery-plan-gantt.mermaid",
+      mermaid: `
+        gantt
+        title EDA Migration - Multi-Team Swim Lanes
+        dateFormat YYYY-QQ
+        axisFormat %Y Q%q
+        section api-catalogue
+        EP1 Mutation Contract :p1e1, 2026-01, 1q
+        EP2 Transactional Outbox :p1e2, 2026-02, 1q
+      `,
+    });
+
+    expect(diagram.diagramType).toBe("gantt");
+    expect(diagram.pageName).toBe("EDA Migration - Multi-Team Swim Lanes");
+    expect(diagram.edges).toEqual([]);
+    expect(diagram.warnings).toContain('ignored_gantt_directive: "axisFormat %Y Q%q"');
+
+    const quarterLabels = diagram.nodes.filter((node) => node.id.startsWith("gantt-quarter-"));
+    expect(quarterLabels.map(stripLayout)).toEqual([
+      { id: "gantt-quarter-0", label: "2026 Q1", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-1", label: "2026 Q2", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+    ]);
+
+    const firstBar = diagram.nodes.find((node) => node.id === "gantt-task-bar-p1e1");
+    const secondBar = diagram.nodes.find((node) => node.id === "gantt-task-bar-p1e2");
+    expect(firstBar).toMatchObject({ x: 288, width: 104, height: 22, shape: "rounded-rectangle" });
+    expect(secondBar).toMatchObject({ x: 328, width: 104, height: 22, shape: "rounded-rectangle" });
+  });
+
+  it("parses named yearly periods when gantt uses YYYY-QQ input", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        gantt
+        title Seasonal rollout
+        dateFormat YYYY-QQ
+        section Delivery
+        Discovery :d1, 2026-S1, 1q
+        Rollout :d2, 2026-S2, 1q
+      `,
+    });
+
+    const periodLabels = diagram.nodes.filter((node) => node.id.startsWith("gantt-quarter-"));
+    expect(periodLabels.map(stripLayout)).toEqual([
+      { id: "gantt-quarter-0", label: "2026 S1", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-1", label: "2026 S2", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+    ]);
+
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")).toMatchObject({ x: 288, width: 104 });
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d2")).toMatchObject({ x: 408, width: 104 });
+  });
+
+  it("parses month-based gantt input", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        gantt
+        title Monthly rollout
+        dateFormat YYYY-MM
+        section Delivery
+        Discovery :d1, 2026-01, 2M
+        Rollout :d2, 2026-03, 1M
+      `,
+    });
+
+    const periodLabels = diagram.nodes.filter((node) => node.id.startsWith("gantt-quarter-"));
+    expect(periodLabels.map(stripLayout)).toEqual([
+      { id: "gantt-quarter-0", label: "2026-01", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-1", label: "2026-02", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-2", label: "2026-03", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+    ]);
+
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")).toMatchObject({ x: 288, width: 224 });
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d2")).toMatchObject({ x: 528, width: 104 });
+  });
+
+  it("parses day-based gantt input", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        gantt
+        title Daily rollout
+        dateFormat YYYY-MM-DD
+        section Delivery
+        Discovery :d1, 2026-01-01, 3d
+        Rollout :d2, 2026-01-04, 1d
+      `,
+    });
+
+    const periodLabels = diagram.nodes.filter((node) => node.id.startsWith("gantt-quarter-"));
+    expect(periodLabels.map(stripLayout)).toEqual([
+      { id: "gantt-quarter-0", label: "2026-01-01", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-1", label: "2026-01-02", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-2", label: "2026-01-03", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+      { id: "gantt-quarter-3", label: "2026-01-04", shape: "rectangle", fillColor: "#f5f5f5", strokeColor: "#d0d0d0", fontColor: "#333333" },
+    ]);
+
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")).toMatchObject({ x: 288, width: 344 });
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d2")).toMatchObject({ x: 648, width: 104 });
+  });
+
+  it("parses sequence participants, messages, self-messages, and notes", () => {
+    const diagram = parseMermaid({
+      sourceName: "catalogue-publication-sequence.mermaid",
+      mermaid: `
+        sequenceDiagram
+        participant BO as Backoffice / Internal
+        participant AC as api-catalogue
+        participant MQ as RabbitMQ
+        BO->>AC: Create or update product
+        AC->>AC: Persist product
+        AC->>MQ: Publish ProductMutationCommitted (via outbox)
+        Note over AC: Legacy post_write HTTP call retired for API writes
+      `,
+    });
+
+    expect(diagram.pageName).toBe("catalogue-publication-sequence");
+    expect(diagram.diagramType).toBe("sequence");
+    expect(diagram.sequenceParticipants).toEqual([
+      { id: "BO", label: "Backoffice / Internal" },
+      { id: "AC", label: "api-catalogue" },
+      { id: "MQ", label: "RabbitMQ" },
+    ]);
+    expect(diagram.sequenceMessages).toEqual([
+      {
+        order: 0,
+        sourceId: "BO",
+        targetId: "AC",
+        label: "Create or update product",
+        kind: "solid",
+      },
+      {
+        order: 1,
+        sourceId: "AC",
+        targetId: "AC",
+        label: "Persist product",
+        kind: "solid",
+      },
+      {
+        order: 2,
+        sourceId: "AC",
+        targetId: "MQ",
+        label: "Publish ProductMutationCommitted (via outbox)",
+        kind: "solid",
+      },
+    ]);
+    expect(diagram.sequenceNotes).toEqual([
+      {
+        order: 3,
+        participantIds: ["AC"],
+        label: "Legacy post_write HTTP call retired for API writes",
+        placement: "over",
+      },
+    ]);
+    expect(diagram.sequenceActivations).toEqual([]);
+    expect(diagram.sequenceFrames).toEqual([]);
+  });
+
+  it("parses explicit activation and deactivation bars", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        sequenceDiagram
+        participant A as API
+        participant B as Worker
+        A->>B: Dispatch
+        activate B
+        B->>B: Process
+        deactivate B
+        B-->>A: Ack
+      `,
+    });
+
+    expect(diagram.sequenceActivations).toEqual([
+      {
+        participantId: "B",
+        startOrder: 0,
+        endOrder: 1,
+        depth: 0,
+      },
+    ]);
+    expect(diagram.sequenceMessages).toEqual([
+      {
+        order: 0,
+        sourceId: "A",
+        targetId: "B",
+        label: "Dispatch",
+        kind: "solid",
+      },
+      {
+        order: 1,
+        sourceId: "B",
+        targetId: "B",
+        label: "Process",
+        kind: "solid",
+      },
+      {
+        order: 2,
+        sourceId: "B",
+        targetId: "A",
+        label: "Ack",
+        kind: "dashed",
+      },
+    ]);
+  });
+
+  it("rejects deactivate without matching activate", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          sequenceDiagram
+          participant A
+          deactivate A
+        `,
+      }),
+    ).toThrow(/deactivate without matching activate/);
+  });
+
+  it("parses opt and loop sequence control frames", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        sequenceDiagram
+        participant A as API
+        participant B as Worker
+        opt Cache miss
+          A->>B: Dispatch
+          loop Retry until success
+            B->>B: Process
+          end
+        end
+        B-->>A: Ack
+      `,
+    });
+
+    expect(diagram.sequenceFrames).toEqual([
+      {
+        kind: "loop",
+        label: "Retry until success",
+        startOrder: 1,
+        endOrder: 1,
+        depth: 1,
+        participantIds: ["B"],
+      },
+      {
+        kind: "opt",
+        label: "Cache miss",
+        startOrder: 0,
+        endOrder: 1,
+        depth: 0,
+        participantIds: ["A", "B"],
+      },
+    ]);
+  });
+
+  it("ignores sequence rect wrappers and keeps inner messages", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        sequenceDiagram
+        participant A as API
+        participant B as Worker
+        rect rgb(230, 240, 255)
+          A->>B: Dispatch
+        end
+        B-->>A: Ack
+      `,
+    });
+
+    expect(diagram.sequenceMessages).toEqual([
+      {
+        order: 0,
+        sourceId: "A",
+        targetId: "B",
+        label: "Dispatch",
+        kind: "solid",
+      },
+      {
+        order: 1,
+        sourceId: "B",
+        targetId: "A",
+        label: "Ack",
+        kind: "dashed",
+      },
+    ]);
+    expect(diagram.sequenceFrames).toEqual([]);
+    expect(diagram.warnings).toEqual([
+      'ignored_sequence_wrapper: "rect rgb(230, 240, 255)"',
+    ]);
+  });
+});

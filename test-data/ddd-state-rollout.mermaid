@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> LegacyOnly : start here
+    LegacyOnly --> DualCompute : new path added,\nboth compute
+    DualCompute --> ProgressiveCutover : parity ≥ 99.99%
+    ProgressiveCutover --> EventDriven : all capabilities cut over
+    EventDriven --> LegacyRetired : legacy path removed
+    LegacyRetired --> [*]
+
+    note right of DualCompute
+        Legacy path: sole production writer
+        New path: computes but does not apply
+        Parity is measured, not assumed
+    end note
+
+    note right of ProgressiveCutover
+        One capability at a time
+        Rollback = flip one flag
+        No big-bang cutover
+    end note

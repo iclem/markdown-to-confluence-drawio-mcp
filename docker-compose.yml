@@ -1,0 +1,46 @@
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mermaid-to-drawio-dev
+    working_dir: /app
+    command: bash
+    environment:
+      CONFLUENCE_BASE_URL: ${CONFLUENCE_BASE_URL:-}
+      CONFLUENCE_EMAIL: ${CONFLUENCE_EMAIL:-}
+      CONFLUENCE_API_TOKEN: ${CONFLUENCE_API_TOKEN:-}
+      CONFLUENCE_BEARER_TOKEN: ${CONFLUENCE_BEARER_TOKEN:-}
+      COPILOT_MCP_CONFLUENCE_URL: ${COPILOT_MCP_CONFLUENCE_URL:-}
+      COPILOT_MCP_CONFLUENCE_USERNAME: ${COPILOT_MCP_CONFLUENCE_USERNAME:-}
+      COPILOT_MCP_CONFLUENCE_API_TOKEN: ${COPILOT_MCP_CONFLUENCE_API_TOKEN:-}
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+      - mermaid_to_drawio_m2:/root/.m2
+      - mermaid_to_drawio_npm:/root/.npm
+
+  mcp:
+    image: mermaid-to-drawio-dev
+    working_dir: /app
+    command:
+      - mcp
+    environment:
+      CONFLUENCE_BASE_URL: ${CONFLUENCE_BASE_URL:-}
+      CONFLUENCE_EMAIL: ${CONFLUENCE_EMAIL:-}
+      CONFLUENCE_API_TOKEN: ${CONFLUENCE_API_TOKEN:-}
+      CONFLUENCE_BEARER_TOKEN: ${CONFLUENCE_BEARER_TOKEN:-}
+      COPILOT_MCP_CONFLUENCE_URL: ${COPILOT_MCP_CONFLUENCE_URL:-}
+      COPILOT_MCP_CONFLUENCE_USERNAME: ${COPILOT_MCP_CONFLUENCE_USERNAME:-}
+      COPILOT_MCP_CONFLUENCE_API_TOKEN: ${COPILOT_MCP_CONFLUENCE_API_TOKEN:-}
+    stdin_open: true
+    tty: false
+    volumes:
+      - .:/app
+      - mermaid_to_drawio_m2:/root/.m2
+      - mermaid_to_drawio_npm:/root/.npm
+
+volumes:
+  mermaid_to_drawio_m2:
+  mermaid_to_drawio_npm:

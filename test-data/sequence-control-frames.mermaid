@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant A as API
+    participant B as Worker
+
+    opt Cache miss
+        A->>B: Dispatch
+        loop Retry until success
+            B->>B: Process
+        end
+    end
+    B-->>A: Ack

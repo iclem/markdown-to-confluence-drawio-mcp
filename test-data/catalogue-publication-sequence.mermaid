@@ -1,0 +1,41 @@
+sequenceDiagram
+    participant BO as Backoffice / Internal
+    participant AC as api-catalogue
+    participant MQ as RabbitMQ
+    participant PP as Product Preparation
+    participant CD as Catalogue Definition (lengow-core)
+    participant FD as Feed Definition (lengow-core)
+    participant FM as Feed Materialization (lengow-publishing)
+    participant SNAP as MongoDB Feed Snapshot
+    participant BAL as publishing-balancer
+    participant PMP as pymarketplaces
+    participant MK as Mirakl
+    participant SRV as NetAmplify Serving Layer
+
+    BO->>AC: Create or update product
+    AC->>AC: Persist product
+    AC->>MQ: Publish ProductMutationCommitted (via outbox)
+    Note over AC: Legacy post_write HTTP call retired for API writes
+
+    MQ->>PP: Deliver ProductMutationCommitted
+    PP->>CD: Read catalogue definition (additional sources, fields, S&R, segments)
+    PP->>PP: Apply shared derivation (joins, derived fields, segments)
+    PP->>PP: Stamp snapshot with catalogue_definition_version_id
+    PP->>MQ: Publish PreparedProductChanged
+
+    MQ->>FM: Deliver PreparedProductChanged
+    FM->>FD: Load feed definition (mappings, rules, exclusions, injections, category mapping)
+    FM->>FM: Route per subscribed feed and per-feed eligibility
+    FM->>FM: Apply feed-scoped materialization (per product, per feed)
+    FM->>SNAP: Update feed snapshot (per product, incremental)
+    FM->>MQ: Publish FeedProductPrepared
+
+    MQ->>BAL: Deliver FeedProductPrepared (NetMarket feeds)
+    BAL->>BAL: Apply quotas, feed locks, concurrency rules
+    BAL->>PMP: Dispatch governed workload
+    PMP->>SNAP: Read affected products from snapshot
+    PMP->>MK: Push offers
+
+    MQ->>SRV: Deliver FeedProductPrepared (NetAmplify feeds)
+    Note over SRV: Invalidate cache or serve live from snapshot
+    SRV->>SNAP: Stream products as CSV/XML/JSON on channel pull

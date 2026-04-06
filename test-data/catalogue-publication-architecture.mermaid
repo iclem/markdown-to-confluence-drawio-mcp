@@ -1,0 +1,80 @@
+graph TB
+    subgraph "Product Write Path"
+        AC["api-catalogue
+write use case"]
+        OB["Outbox table
+(PostgreSQL)"]
+        PUB["Outbox publisher"]
+    end
+
+    subgraph "Broker"
+        MQ["RabbitMQ"]
+    end
+
+    subgraph "Catalogue Definition (lengow-core)"
+        CDS["Catalogue structure API"]
+        CDR["Additional fields,
+S&R, segments
+(PostgreSQL)"]
+    end
+
+    subgraph "Product Preparation"
+        PPS["Preparation service"]
+        SS["Prepared snapshot store
+(MongoDB / dedicated)"]
+    end
+
+    subgraph "Feed Definition (lengow-core)"
+        FDS["Feed definition API"]
+        FDR["Mappings, rules,
+category mapping
+(PostgreSQL)"]
+    end
+
+    subgraph "Feed Materialization (lengow-publishing)"
+        LP["Materialization engine"]
+        ELIG["Per-feed eligibility"]
+        FSNAP["Feed snapshot
+(MongoDB)"]
+    end
+
+    subgraph "Publication Governance (publishing-balancer)"
+        BAL["Balancer / quota engine"]
+        LOCKS["Feed locks (Redis)"]
+    end
+
+    subgraph "Channel Delivery — NetMarket (pymarketplaces)"
+        PMP["Mirakl connector"]
+    end
+
+    subgraph "Channel Delivery — NetAmplify (serving layer)"
+        SRV["Snapshot reader
++ CSV/XML/JSON streamer"]
+    end
+
+    subgraph "Channels"
+        MK["Mirakl Marketplaces"]
+        NA["1600+ pull channels"]
+    end
+
+    AC --> OB --> PUB --> MQ
+    CDS --> CDR
+    CDR --> PPS
+    MQ --> PPS
+    PPS --> SS
+    PPS --> MQ
+    FDS --> FDR
+    FDR --> LP
+    MQ --> LP
+    SS --> LP
+    ELIG --> LP
+    LP --> FSNAP
+    LP -- "FeedProductPrepared" --> MQ
+    MQ --> BAL
+    MQ --> SRV
+    LOCKS --> BAL
+    BAL --> PMP
+    PMP -- "read snapshot" --> FSNAP
+    PMP --> MK
+    SRV -- "read snapshot" --> FSNAP
+    SRV --> NA

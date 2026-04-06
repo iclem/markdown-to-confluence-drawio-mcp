@@ -1,0 +1,23 @@
+{
+  "name": "@nasdanika/mermaid-to-drawio-publisher",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "mcp": "node dist/mcp-server.js",
+    "mcp:http": "node dist/mcp-http-server.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.1",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1"
+  }
+}

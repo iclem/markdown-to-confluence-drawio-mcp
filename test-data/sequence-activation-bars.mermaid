@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant A as API
+    participant B as Worker
+
+    A->>B: Dispatch
+    activate B
+    B->>B: Process
+    deactivate B
+    B-->>A: Ack

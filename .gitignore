@@ -1,0 +1,9 @@
+.DS_Store
+parser/node_modules/
+parser/dist/
+publisher/node_modules/
+publisher/dist/
+generator/target/
+output/
+eda/
+lengow-core/

@@ -1,0 +1,9 @@
+stateDiagram-v2
+    [*] --> LegacyOnly : start here
+    LegacyOnly --> EventDriven : all capabilities cut over
+    EventDriven --> [*]
+
+    note right of LegacyOnly
+        Legacy path: sole production writer
+        New path: computes but does not apply
+    end note

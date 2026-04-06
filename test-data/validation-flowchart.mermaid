@@ -1,0 +1,4 @@
+flowchart TD
+Validate[Validate Mermaid]; Parse{Parser ok?}; Generate[Generate Draw.io]; Publish((Publish)); Review[Review output]
+Validate --> Parse -->|yes| Generate --> Publish
+Parse --- Retry(Retry) & Review
