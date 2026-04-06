@@ -41,12 +41,18 @@ Start the HTTP MCP server:
 docker run --rm \
   -p 3000:3000 \
   -v "$PWD":"$PWD" \
-  -e MCP_HOST=0.0.0.0 \
+  -e MCP_HOST=127.0.0.1 \
   -e MCP_PORT=3000 \
-  -e CONFLUENCE_BASE_URL \
-  -e CONFLUENCE_EMAIL \
-  -e CONFLUENCE_API_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local mcp-http
+```
+
+Or use the development compose service:
+
+```bash
+docker compose -f build/docker-compose/docker-compose-local.yml up mcp-http
 ```
 
 Register the server in your agent at:

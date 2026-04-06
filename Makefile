@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE_FILE ?= -f build/docker-compose/docker-compose-local.yml
 
-.PHONY: build shell test test-parser check-parser test-generator test-e2e image-mcp
+.PHONY: build shell test test-parser check-parser test-generator test-e2e image-mcp mcp-http
 
 DEV_RUN = docker compose $(COMPOSE_FILE) run --rm dev bash -lc
 
@@ -32,6 +32,9 @@ test-e2e: # Run e2e tests on mermaid diagram samples
 
 image-mcp: # Build MCP server image
 	docker build -t markdown-to-confluence-drawio-mcp:local .
+
+mcp-http: # Run the local HTTP MCP server through docker compose
+	docker compose $(COMPOSE_FILE) up mcp-http
 
 
 # End Strong Red Green Blue Teal White Yellow bacKground

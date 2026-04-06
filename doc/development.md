@@ -55,6 +55,12 @@ docker run --rm -i -v "$PWD:/work" -w /work markdown-to-confluence-drawio-mcp:lo
 docker run --rm -i markdown-to-confluence-drawio-mcp:local test
 ```
 
+The development compose file also exposes an `mcp-http` service:
+
+```bash
+docker compose -f build/docker-compose/docker-compose-local.yml up mcp-http
+```
+
 For convenience, `make image-mcp` builds the same image tag:
 
 ```bash
@@ -271,15 +277,21 @@ This runs the default `mcp` entrypoint in the packaged image.
 
 ```bash
 docker run --rm -p 3000:3000 \
-  -e MCP_HOST=0.0.0.0 \
+  -e MCP_HOST=127.0.0.1 \
   -e MCP_PORT=3000 \
-  -e CONFLUENCE_BASE_URL \
-  -e CONFLUENCE_EMAIL \
-  -e CONFLUENCE_API_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local mcp-http
 ```
 
 The Streamable HTTP endpoint is served at `/mcp`, with a simple health check at `/healthz`.
+
+The equivalent compose command is:
+
+```bash
+docker compose -f build/docker-compose/docker-compose-local.yml up mcp-http
+```
 
 ### Current MCP tools
 
