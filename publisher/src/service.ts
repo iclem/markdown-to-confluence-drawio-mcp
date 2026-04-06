@@ -235,35 +235,18 @@ export class DrawioPublisherService {
     return this.inspectPage(args.pageId);
   }
 
-  async createPageFromMarkdown(args: {
-    title: string;
+  private async publishMarkdownToPage(args: {
+    page: ConfluencePage;
     markdown: string;
     sourceName?: string;
-    spaceId?: string;
-    parentId?: string;
-    siblingPageId?: string;
     spaceKey?: string;
   }): Promise<MarkdownPublishResult> {
     const source = args.sourceName ?? "markdown.md";
-    const siblingPage =
-      args.siblingPageId ? await this.client.getPage(args.siblingPageId, "atlas_doc_format", false) : undefined;
-    const spaceId = args.spaceId ?? siblingPage?.spaceId;
-    if (!spaceId) {
-      throw new Error("Provide spaceId or siblingPageId");
-    }
-
-    const page = await this.client.createPage({
-      spaceId,
-      parentId: args.parentId ?? siblingPage?.parentId,
-      title: args.title,
-      status: "current",
-      adfDocument: { type: "doc", version: 1, content: [] },
-    });
-
+    const page = args.page;
     const blocks = parseMarkdown(args.markdown);
     const adfDocument: JsonObject = { type: "doc", version: 1, content: [] };
     const content = adfDocument.content as unknown[];
-    const baseDiagramName = args.title
+    const baseDiagramName = page.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "diagram";
@@ -358,6 +341,38 @@ export class DrawioPublisherService {
     };
   }
 
+  async createPageFromMarkdown(args: {
+    title: string;
+    markdown: string;
+    sourceName?: string;
+    spaceId?: string;
+    parentId?: string;
+    siblingPageId?: string;
+    spaceKey?: string;
+  }): Promise<MarkdownPublishResult> {
+    const source = args.sourceName ?? "markdown.md";
+    const siblingPage =
+      args.siblingPageId ? await this.client.getPage(args.siblingPageId, "atlas_doc_format", false) : undefined;
+    const spaceId = args.spaceId ?? siblingPage?.spaceId;
+    if (!spaceId) {
+      throw new Error("Provide spaceId or siblingPageId");
+    }
+
+    const page = await this.client.createPage({
+      spaceId,
+      parentId: args.parentId ?? siblingPage?.parentId,
+      title: args.title,
+      status: "current",
+      adfDocument: { type: "doc", version: 1, content: [] },
+    });
+    return this.publishMarkdownToPage({
+      page,
+      markdown: args.markdown,
+      sourceName: source,
+      spaceKey: args.spaceKey,
+    });
+  }
+
   async createPageFromMarkdownFile(args: {
     title: string;
     markdownFile: string;
@@ -376,6 +391,37 @@ export class DrawioPublisherService {
       spaceId: args.spaceId,
       parentId: args.parentId,
       siblingPageId: args.siblingPageId,
+      spaceKey: args.spaceKey,
+    });
+  }
+
+  async updatePageFromMarkdown(args: {
+    pageId: string;
+    markdown: string;
+    sourceName?: string;
+    spaceKey?: string;
+  }): Promise<MarkdownPublishResult> {
+    const page = await this.client.getPage(args.pageId, "atlas_doc_format", false);
+    return this.publishMarkdownToPage({
+      page,
+      markdown: args.markdown,
+      sourceName: args.sourceName,
+      spaceKey: args.spaceKey,
+    });
+  }
+
+  async updatePageFromMarkdownFile(args: {
+    pageId: string;
+    markdownFile: string;
+    sourceName?: string;
+    spaceKey?: string;
+  }): Promise<MarkdownPublishResult> {
+    const markdownFile = resolve(args.markdownFile);
+    const markdown = await readFile(markdownFile, "utf8");
+    return this.updatePageFromMarkdown({
+      pageId: args.pageId,
+      markdown,
+      sourceName: args.sourceName ?? basename(markdownFile),
       spaceKey: args.spaceKey,
     });
   }
