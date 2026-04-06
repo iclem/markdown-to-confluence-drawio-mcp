@@ -218,6 +218,7 @@ The Markdown publisher currently supports:
 - paragraphs
 - block quotes
 - bullet lists
+- ordered lists
 - tables
 - rules
 - fenced code blocks

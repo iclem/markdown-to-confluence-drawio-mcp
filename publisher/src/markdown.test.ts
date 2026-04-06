@@ -6,6 +6,7 @@ import {
   buildCodeBlockNode,
   buildExpandNode,
   buildHeadingNode,
+  buildOrderedListNode,
   buildParagraphNode,
   buildTableNode,
   parseMarkdown,
@@ -22,6 +23,10 @@ Intro paragraph.
 
 - First
 - Second
+
+1. Start
+   with details
+2. Continue
 
 | Team | Work stream |
 | --- | --- |
@@ -45,6 +50,7 @@ const value = 1;
       { type: "paragraph", text: "Intro paragraph." },
       { type: "blockquote", text: "Quoted text" },
       { type: "bulletList", items: ["First", "Second"] },
+      { type: "orderedList", items: ["Start with details", "Continue"], start: 1 },
       { type: "table", header: ["Team", "Work stream"], rows: [["api-catalogue", "EP1"], ["lengow-core", "EP3"]] },
       { type: "rule" },
       { type: "mermaid", text: "flowchart TD\nA --> B" },
@@ -79,6 +85,14 @@ const value = 1;
     });
     expect(buildBulletListNode(["One", "Two"])).toEqual({
       type: "bulletList",
+      content: [
+        { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "One" }] }] },
+        { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Two" }] }] },
+      ],
+    });
+    expect(buildOrderedListNode(["One", "Two"], 3)).toEqual({
+      type: "orderedList",
+      attrs: { order: 3 },
       content: [
         { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "One" }] }] },
         { type: "listItem", content: [{ type: "paragraph", content: [{ type: "text", text: "Two" }] }] },

@@ -26,6 +26,7 @@ import {
   buildCodeBlockNode,
   buildExpandNode,
   buildHeadingNode,
+  buildOrderedListNode,
   buildParagraphNode,
   buildTableNode,
   parseMarkdown,
@@ -269,6 +270,10 @@ export class DrawioPublisherService {
       }
       if (block.type === "bulletList") {
         content.push(buildBulletListNode(block.items));
+        continue;
+      }
+      if (block.type === "orderedList") {
+        content.push(buildOrderedListNode(block.items, block.start));
         continue;
       }
       if (block.type === "table") {

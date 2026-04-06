@@ -271,7 +271,7 @@ Select the target widget by:
 
 - The HTTP server is intentionally **stateless**. That avoids session bootstrap issues with current HTTP MCP hosts.
 - The draw.io preview uploaded with the widget is currently a **placeholder PNG preview**, not a full rendered export.
-- Markdown publication supports headings, paragraphs, block quotes, bullet lists, tables, rules, code blocks, and Mermaid fenced blocks.
+- Markdown publication supports headings, paragraphs, block quotes, bullet lists, ordered lists, tables, rules, code blocks, and Mermaid fenced blocks.
 
 ## Troubleshooting
 
