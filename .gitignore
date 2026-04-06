@@ -5,5 +5,5 @@ publisher/node_modules/
 publisher/dist/
 generator/target/
 output/
-eda/
-lengow-core/
+eda
+lengow-core
