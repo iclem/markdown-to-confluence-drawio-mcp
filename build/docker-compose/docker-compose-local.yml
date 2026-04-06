@@ -3,7 +3,7 @@ services:
     build:
       context: ../..
       dockerfile: Dockerfile
-    image: mermaid-to-drawio-dev
+    image: markdown-to-confluence-drawio-mcp-dev
     working_dir: /app
     command: bash
     environment:
@@ -18,11 +18,11 @@ services:
     tty: true
     volumes:
       - ../../:/app
-      - mermaid_to_drawio_m2:/root/.m2
-      - mermaid_to_drawio_npm:/root/.npm
+      - markdown_to_confluence_drawio_mcp_m2:/root/.m2
+      - markdown_to_confluence_drawio_mcp_npm:/root/.npm
 
   mcp:
-    image: mermaid-to-drawio-dev
+    image: markdown-to-confluence-drawio-mcp-dev
     working_dir: /app
     command:
       - mcp
@@ -38,9 +38,9 @@ services:
     tty: false
     volumes:
       - ../../:/app
-      - mermaid_to_drawio_m2:/root/.m2
-      - mermaid_to_drawio_npm:/root/.npm
+      - markdown_to_confluence_drawio_mcp_m2:/root/.m2
+      - markdown_to_confluence_drawio_mcp_npm:/root/.npm
 
 volumes:
-  mermaid_to_drawio_m2:
-  mermaid_to_drawio_npm:
+  markdown_to_confluence_drawio_mcp_m2:
+  markdown_to_confluence_drawio_mcp_npm:

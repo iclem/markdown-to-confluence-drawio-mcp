@@ -1,5 +1,5 @@
 {
-  "name": "@nasdanika/mermaid-to-drawio-parser",
+  "name": "@iclem/markdown-to-confluence-drawio-mcp-parser",
   "version": "0.1.0",
   "private": true,
   "type": "module",

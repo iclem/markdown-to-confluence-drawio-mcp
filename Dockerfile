@@ -14,10 +14,10 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-ENV MERMAID_TO_DRAWIO_HOME=/app
-WORKDIR ${MERMAID_TO_DRAWIO_HOME}
+ENV MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_HOME=/app
+WORKDIR ${MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_HOME}
 
-COPY . ${MERMAID_TO_DRAWIO_HOME}
+COPY . ${MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_HOME}
 
 RUN npm --prefix parser ci \
     && npm --prefix parser run build \

@@ -1,4 +1,4 @@
-# Mermaid to Draw.io Quick Start
+# Markdown to Confluence Draw.io MCP Quick Start
 
 This is the shortest path from a clean checkout to a successful Confluence publish through the MCP server.
 
@@ -26,7 +26,7 @@ export COPILOT_MCP_CONFLUENCE_API_TOKEN="..."
 
 ## 2. Build the runtime image
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 make image-mcp
@@ -36,7 +36,7 @@ make image-mcp
 
 If you want to publish from a file path, mount the directory containing that file into the container at the **same absolute path**.
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 docker run --rm \
@@ -47,7 +47,7 @@ docker run --rm \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
-  mermaid-to-drawio:local mcp-http
+  markdown-to-confluence-drawio-mcp:local mcp-http
 ```
 
 Health check:

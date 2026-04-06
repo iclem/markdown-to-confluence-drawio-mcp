@@ -1,4 +1,4 @@
-# Mermaid to Draw.io Development Environment
+# Markdown to Confluence Draw.io MCP Development Environment
 
 ## Documentation map
 
@@ -16,7 +16,7 @@ This workspace uses a hybrid toolchain:
 
 ## Build the development image
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 make build
@@ -24,21 +24,21 @@ make build
 
 ## Start an interactive shell
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 make shell
 ```
 
-The repository is mounted at `/workspace` and the converter workspace is `/workspace/mermaid-to-drawio`.
+The repository is mounted at `/app`.
 
 ## Packaged runtime contract
 
 The release-oriented contract is now a **single Docker image** with a **single supported default entrypoint**:
 
 ```bash
-docker build -t mermaid-to-drawio:local .
-docker run --rm -i mermaid-to-drawio:local
+docker build -t markdown-to-confluence-drawio-mcp:local .
+docker run --rm -i markdown-to-confluence-drawio-mcp:local
 ```
 
 The default command starts the product-owned stdio MCP server.
@@ -48,11 +48,11 @@ The development compose file also follows the corporate layout under `build/dock
 Supported subcommands:
 
 ```bash
-docker run --rm -i mermaid-to-drawio:local mcp
-docker run --rm -p 3000:3000 mermaid-to-drawio:local mcp-http
-docker run --rm -i mermaid-to-drawio:local publisher-cli --help
-docker run --rm -i -v "$PWD:/work" -w /work mermaid-to-drawio:local convert input.mermaid output.drawio
-docker run --rm -i mermaid-to-drawio:local test
+docker run --rm -i markdown-to-confluence-drawio-mcp:local mcp
+docker run --rm -p 3000:3000 markdown-to-confluence-drawio-mcp:local mcp-http
+docker run --rm -i markdown-to-confluence-drawio-mcp:local publisher-cli --help
+docker run --rm -i -v "$PWD:/work" -w /work markdown-to-confluence-drawio-mcp:local convert input.mermaid output.drawio
+docker run --rm -i markdown-to-confluence-drawio-mcp:local test
 ```
 
 For convenience, `make image-mcp` builds the same image tag:
@@ -70,7 +70,7 @@ This workspace now follows that model directly: it does **not** bootstrap artifa
 Install parser dependencies:
 
 ```bash
-cd /workspace/mermaid-to-drawio/parser
+cd /app/parser
 npm install
 ```
 
@@ -83,14 +83,14 @@ npm run check
 Build the Java generator scaffold:
 
 ```bash
-cd /workspace/mermaid-to-drawio/generator
+cd /app/generator
 mvn package -DskipTests
 ```
 
 If you want to prove builds are independent from any pre-populated Maven cache, point the scripts at a clean local repository:
 
 ```bash
-export MAVEN_REPO_LOCAL=/tmp/mermaid-to-drawio-m2
+export MAVEN_REPO_LOCAL=/tmp/markdown-to-confluence-drawio-mcp-m2
 ./scripts/convert.sh ./test-data/simple-flowchart.mermaid ./output/simple-flowchart.drawio
 ```
 
@@ -98,7 +98,7 @@ This is the expected path for a future standalone product repository as well.
 
 ## Run the current test suite
 
-From `mermaid-to-drawio/`:
+From the repository root:
 
 ```bash
 make test
@@ -125,7 +125,7 @@ make test-e2e
 Inside the container:
 
 ```bash
-cd /workspace/mermaid-to-drawio
+cd /app
 ./scripts/convert.sh ./test-data/simple-flowchart.mermaid ./output/simple-flowchart.drawio
 ```
 
@@ -136,7 +136,7 @@ The script prints the generated `.drawio` path and leaves the file on disk for i
 Inside the container:
 
 ```bash
-cd /workspace/mermaid-to-drawio
+cd /app
 ./scripts/validate-outcome.sh
 ```
 
@@ -146,8 +146,8 @@ This writes `output/validation-flowchart.drawio` plus the other manual inspectio
 
 The Compose setup keeps:
 
-- Maven artifacts in the `mermaid_to_drawio_m2` volume
-- npm cache in the `mermaid_to_drawio_npm` volume
+- Maven artifacts in the `markdown_to_confluence_drawio_mcp_m2` volume
+- npm cache in the `markdown_to_confluence_drawio_mcp_npm` volume
 
 ## Current state
 
@@ -262,7 +262,7 @@ docker run --rm -i \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
-  mermaid-to-drawio:local
+  markdown-to-confluence-drawio-mcp:local
 ```
 
 This runs the default `mcp` entrypoint in the packaged image.
@@ -276,7 +276,7 @@ docker run --rm -p 3000:3000 \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
-  mermaid-to-drawio:local mcp-http
+  markdown-to-confluence-drawio-mcp:local mcp-http
 ```
 
 The Streamable HTTP endpoint is served at `/mcp`, with a simple health check at `/healthz`.
@@ -329,7 +329,7 @@ Create a sibling page from Markdown:
 ```bash
 cat docs/domain-context-map.md | docker compose run --rm -T dev bash -lc '
   cat >/tmp/domain-context-map.md &&
-  cd /workspace/mermaid-to-drawio/publisher &&
+  cd /app/publisher &&
   npm install &&
   npm run build &&
   node dist/cli.js create-page-from-markdown \
@@ -366,10 +366,10 @@ The live Confluence validation path remains tenant-dependent and should be exerc
 
 The core runtime image is intentionally **product-only**: it ships the product-owned MCP server and converter toolchain, not `mcp-atlassian`.
 
-To register the packaged server in GitHub Copilot cloud agents, use the repository-root file `.github/copilot/cloud-agent/mermaid-to-drawio.json` as the starting point. A repository administrator must:
+To register the packaged server in GitHub Copilot cloud agents, use the repository-root file `.github/copilot/cloud-agent/markdown-to-confluence-drawio-mcp.json` as the starting point. A repository administrator must:
 
 1. Open **Settings** -> **Copilot** -> **Cloud agent**
-2. Paste the JSON from the repository-root file `.github/copilot/cloud-agent/mermaid-to-drawio.json` into **MCP configuration**
+2. Paste the JSON from the repository-root file `.github/copilot/cloud-agent/markdown-to-confluence-drawio-mcp.json` into **MCP configuration**
 3. Create a `copilot` environment if it does not already exist
 4. Provide the required Confluence secrets through environment variables:
    - `CONFLUENCE_BASE_URL` or `COPILOT_MCP_CONFLUENCE_URL`
