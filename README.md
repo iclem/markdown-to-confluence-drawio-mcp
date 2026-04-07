@@ -39,7 +39,7 @@ Start the HTTP MCP server:
 
 ```bash
 docker run --rm \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -v "$PWD":"$PWD" \
   -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=3000 \
@@ -56,6 +56,8 @@ docker compose -f build/docker-compose/docker-compose-local.yml up mcp-http
 ```
 
 The container binds to `0.0.0.0`, while local MCP clients should still connect to `http://127.0.0.1:3000/mcp` on the host.
+
+This keeps the default host exposure local-only. If you intentionally want LAN access, change the published port binding to `-p 3000:3000`.
 
 Register the server in your agent at:
 

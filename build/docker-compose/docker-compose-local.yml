@@ -57,7 +57,7 @@ services:
       COPILOT_MCP_CONFLUENCE_USERNAME: ${COPILOT_MCP_CONFLUENCE_USERNAME:-}
       COPILOT_MCP_CONFLUENCE_API_TOKEN: ${COPILOT_MCP_CONFLUENCE_API_TOKEN:-}
     ports:
-      - "${MCP_PORT:-3000}:${MCP_PORT:-3000}"
+      - "127.0.0.1:${MCP_PORT:-3000}:${MCP_PORT:-3000}"
     tty: false
     volumes:
       - ../../:/app
