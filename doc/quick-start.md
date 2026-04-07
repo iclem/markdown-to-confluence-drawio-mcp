@@ -40,9 +40,9 @@ From the repository root:
 
 ```bash
 docker run --rm \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -v "$PWD":"$PWD" \
-  -e MCP_HOST=127.0.0.1 \
+  -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=3000 \
   -e COPILOT_MCP_CONFLUENCE_URL \
   -e COPILOT_MCP_CONFLUENCE_USERNAME \
@@ -61,6 +61,10 @@ Equivalent Make target:
 ```bash
 make mcp-http
 ```
+
+Inside the container, the server must bind to `0.0.0.0` so Docker can publish port `3000`. From the host, connect to `http://127.0.0.1:3000/mcp`.
+
+The default published port is host-local only. If you want the service reachable from your LAN, use `-p 3000:3000` instead.
 
 Health check:
 

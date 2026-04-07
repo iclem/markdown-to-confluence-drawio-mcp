@@ -47,9 +47,9 @@ HTTP is the best default for local agent integrations because one container can 
 
 ```bash
 docker run --rm \
-  -p 3000:3000 \
+  -p 127.0.0.1:3000:3000 \
   -v "$PWD":"$PWD" \
-  -e MCP_HOST=127.0.0.1 \
+  -e MCP_HOST=0.0.0.0 \
   -e MCP_PORT=3000 \
   -e COPILOT_MCP_CONFLUENCE_URL \
   -e COPILOT_MCP_CONFLUENCE_USERNAME \
@@ -68,6 +68,10 @@ Equivalent Make target:
 ```bash
 make mcp-http
 ```
+
+For containerized HTTP, `MCP_HOST` must be `0.0.0.0` so the published Docker port can reach the server. MCP clients on the host should still use `http://127.0.0.1:3000/mcp`.
+
+The documented default publishes the port on `127.0.0.1` only. If you explicitly want network access from other machines, change the Docker port mapping to `-p 3000:3000`.
 
 Endpoint:
 
