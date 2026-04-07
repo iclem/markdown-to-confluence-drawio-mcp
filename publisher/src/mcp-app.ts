@@ -6,7 +6,13 @@ import { convertMermaidToArtifacts } from "./converter.js";
 import { DrawioPublisherService } from "./service.js";
 
 function getConfluenceSetting(primary: string, fallback?: string): string | undefined {
-  return process.env[primary] ?? (fallback ? process.env[fallback] : undefined);
+  const primaryValue = process.env[primary]?.trim();
+  if (primaryValue) {
+    return primaryValue;
+  }
+
+  const fallbackValue = fallback ? process.env[fallback]?.trim() : undefined;
+  return fallbackValue || undefined;
 }
 
 function isFileNotFoundError(error: unknown): error is NodeJS.ErrnoException {
