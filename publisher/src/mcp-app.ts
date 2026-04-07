@@ -9,6 +9,28 @@ function getConfluenceSetting(primary: string, fallback?: string): string | unde
   return process.env[primary] ?? (fallback ? process.env[fallback] : undefined);
 }
 
+function isFileNotFoundError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error && error.code === "ENOENT";
+}
+
+export function formatMarkdownFileNotFoundMessage(markdownFile: string): string {
+  return (
+    `Markdown file not found: ${markdownFile}. The path must exist on the MCP server host. ` +
+    `If the server runs in Docker, bind-mount the host directory into the container at the same absolute path, ` +
+    `or use the non-file Markdown tool and send the Markdown content directly.`
+  );
+}
+
+function withMarkdownFileHint<T>(markdownFile: string, operation: () => Promise<T>): Promise<T> {
+  return operation().catch((error: unknown) => {
+    if (isFileNotFoundError(error)) {
+      throw new Error(formatMarkdownFileNotFoundMessage(markdownFile));
+    }
+
+    throw error;
+  });
+}
+
 export function createPublisherService(): DrawioPublisherService {
   const baseUrl = getConfluenceSetting("CONFLUENCE_BASE_URL", "COPILOT_MCP_CONFLUENCE_URL");
   const email = getConfluenceSetting("CONFLUENCE_EMAIL", "COPILOT_MCP_CONFLUENCE_USERNAME");
@@ -143,8 +165,9 @@ export function createMcpServer(): McpServer {
     },
     async ({ title, markdownFile, sourceName, spaceId, parentId, siblingPageId, spaceKey }) => {
       const service = createPublisherService();
-      return textResult(
-        await service.createPageFromMarkdownFile({
+      return textResult(await withMarkdownFileHint(
+        markdownFile,
+        () => service.createPageFromMarkdownFile({
           title,
           markdownFile,
           sourceName,
@@ -153,7 +176,7 @@ export function createMcpServer(): McpServer {
           siblingPageId,
           spaceKey,
         }),
-      );
+      ));
     },
   );
 
@@ -190,14 +213,15 @@ export function createMcpServer(): McpServer {
     },
     async ({ pageId, markdownFile, sourceName, spaceKey }) => {
       const service = createPublisherService();
-      return textResult(
-        await service.updatePageFromMarkdownFile({
+      return textResult(await withMarkdownFileHint(
+        markdownFile,
+        () => service.updatePageFromMarkdownFile({
           pageId,
           markdownFile,
           sourceName,
           spaceKey,
         }),
-      );
+      ));
     },
   );
 
