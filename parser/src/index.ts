@@ -184,7 +184,7 @@ interface GanttTimelineConfig {
   dateFormat: string;
   parseStart(rawValue: string): number | undefined;
   parseEnd(rawValue: string): number | undefined;
-  parseDuration(rawValue: string): number | undefined;
+  parseDuration(rawValue: string, startPosition: number): number | undefined;
   formatLabel(index: number): string;
 }
 
@@ -1073,6 +1073,28 @@ function addUtcDays(parts: { year: number; month: number; day: number }, days: n
   };
 }
 
+function addUtcMonths(parts: { year: number; month: number; day: number }, months: number): { year: number; month: number; day: number } {
+  const zeroBasedMonth = parts.month - 1 + months;
+  const year = parts.year + Math.floor(zeroBasedMonth / 12);
+  const monthIndex = ((zeroBasedMonth % 12) + 12) % 12;
+  const month = monthIndex + 1;
+
+  return {
+    year,
+    month,
+    day: Math.min(parts.day, getUtcDaysInMonth(year, month)),
+  };
+}
+
+function fromEpochDay(epochDay: number): { year: number; month: number; day: number } {
+  const date = new Date(epochDay * GANTT_DAY_MS);
+  return {
+    year: date.getUTCFullYear(),
+    month: date.getUTCMonth() + 1,
+    day: date.getUTCDate(),
+  };
+}
+
 function toEpochDay(parts: { year: number; month: number; day: number }): number {
   return Math.floor(Date.UTC(parts.year, parts.month - 1, parts.day) / GANTT_DAY_MS);
 }
@@ -1224,7 +1246,7 @@ function createGanttDayTimeline(): GanttTimelineConfig {
       const day = parseGanttDay(rawValue);
       return day ? toEpochDay(day) + 1 : undefined;
     },
-    parseDuration(rawValue: string): number | undefined {
+    parseDuration(rawValue: string, startPosition: number): number | undefined {
       const duration = parseGanttDuration(rawValue);
       if (!duration) {
         return undefined;
@@ -1234,6 +1256,10 @@ function createGanttDayTimeline(): GanttTimelineConfig {
       }
       if (duration.unit.toLowerCase() === "w") {
         return duration.value * 7;
+      }
+      if (duration.unit === "M") {
+        const startDay = fromEpochDay(startPosition);
+        return toEpochDay(addUtcMonths(startDay, duration.value)) - startPosition;
       }
       return undefined;
     },
@@ -1305,7 +1331,7 @@ function resolveGanttTaskEnd(
     return previousEndQuarter;
   }
 
-  const duration = timeline.parseDuration(rawValue);
+  const duration = timeline.parseDuration(rawValue, startQuarter);
   if (duration !== undefined) {
     return startQuarter + duration;
   }
@@ -1363,7 +1389,8 @@ function parseGanttTask(
 
   const startQuarter = resolveGanttTaskStart(metadata[0], previousEndQuarter, tasksById, timeline);
   const endQuarter = resolveGanttTaskEnd(startQuarter, metadata[1], tasksById, previousEndQuarter, timeline);
-  if (endQuarter <= startQuarter) {
+  const isMilestone = tags.includes("milestone");
+  if (endQuarter < startQuarter || (endQuarter === startQuarter && !isMilestone)) {
     throw new Error(`parse_error: gantt task "${title}" has a non-positive duration`);
   }
 

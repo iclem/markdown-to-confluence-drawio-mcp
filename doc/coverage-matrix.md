@@ -135,7 +135,7 @@ The current implementation is intentionally narrow. It is usable for simple proc
 | Explicit start + end | `Task :id, 2026-01-01, 2026-01-04` | `supported` | End dates are treated as inclusive Mermaid-style bounds. |
 | `after` references | `Task :id, after other, 1q` | `supported` | Uses the latest referenced task end as the next start. |
 | `until` references | `Task :id, 2026-01, until other` | `supported` | Stops at the referenced task start. |
-| Duration units | `1q`, `2M`, `3d`, `1w` | `partial` | `q` for quarter-style timelines, `M` for month timelines, and `d` / `w` for day timelines are supported; broader Mermaid duration coverage is still missing. |
+| Duration units | `1q`, `2M`, `3d`, `1w` | `partial` | `q` for quarter-style timelines, `M` for month and day timelines, and `d` / `w` for day timelines are supported; broader Mermaid duration coverage is still missing. |
 | Task tags | `crit`, `done`, `active`, `milestone` | `partial` | Tags drive bar colors and milestone shape, but Mermaid's richer gantt styling/config is still missing. |
 | Milestones | `milestone` task tag | `supported` | Rendered as ellipse markers. |
 | Excludes / weekends | `excludes weekends` | `not-started` | Calendar-aware exclusion logic is not implemented. |

@@ -447,6 +447,29 @@ write use case"]
     expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d2")).toMatchObject({ x: 648, width: 104 });
   });
 
+  it("accepts zero-day milestones and month durations in day-based gantt input", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        gantt
+        title Daily rollout with milestone
+        dateFormat YYYY-MM-DD
+        section Delivery
+        Contracts reviewed and agreed at kickoff :milestone, ck, 2026-05-01, 0d
+        Discovery :d1, 2026-05-02, 4M
+      `,
+    });
+
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-ck")).toMatchObject({
+      shape: "ellipse",
+      width: 24,
+      height: 24,
+    });
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")).toMatchObject({
+      shape: "rounded-rectangle",
+    });
+    expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")!.width).toBeGreaterThan(10000);
+  });
+
   it("parses sequence participants, messages, self-messages, and notes", () => {
     const diagram = parseMermaid({
       sourceName: "catalogue-publication-sequence.mermaid",
