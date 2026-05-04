@@ -43,7 +43,7 @@ Source of Mermaid diagram-type list:
 | User journey | `journey` | `not-started` | Out of current v1 scope. |
 | Venn | `venn` | `not-started` | No parser or mapping yet. |
 | Wardley map | `wardley` | `not-started` | No parser or mapping yet. |
-| XY chart | `xychart-beta` | `not-started` | No parser or mapping yet. |
+| XY chart | `xychart-beta` | `partial` | Supports a constrained explicit-layout subset: optional `title`, categorical `x-axis`, ranged `y-axis`, and one or more `bar` and/or `line` series; horizontal charts, numeric x-axis ranges, legends, and Mermaid theming remain unsupported. |
 | ZenUML | `zenuml` | `not-planned` | Mermaid treats this as an integration surface rather than a core target for this converter. |
 
 ## Flowchart feature coverage
@@ -142,8 +142,26 @@ The current implementation is intentionally narrow. It is usable for simple proc
 | Tick intervals / vertical markers | `tickInterval`, `vert` | `not-started` | Not parsed yet. |
 | Compact display / today marker / theme config | YAML/config directives | `not-started` | No gantt config passthrough yet. |
 
+## XY chart feature coverage
+
+| XY chart feature | Example | Status | Notes |
+| --- | --- | --- | --- |
+| XY chart header | `xychart-beta` | `supported` | Dispatches to the xychart parser path and emits explicit-layout nodes and edges. |
+| Chart title | `title Cost by phase` | `supported` | Rendered as a top text node. |
+| Categorical x-axis | `x-axis "Phase" [prep, judge, scale]` | `supported` | Optional quoted axis label plus categorical bands are supported. |
+| Ranged y-axis | `y-axis "Cost" 0 --> 100` | `supported` | Optional quoted axis label plus numeric `min --> max` range drive linear scaling and readable ticks. |
+| Bar series | `bar [10, 20, 30]` | `supported` | One or more bar series are rendered as grouped rounded-rectangle columns. |
+| Line series | `line [10, 20, 30]` | `supported` | One or more line series are rendered as point markers connected by plain edges. |
+| Mixed bar + line charts | repeated `bar` and `line` directives | `supported` | Mixed charts convert through the same explicit-layout synthesis path. |
+| Grouped multi-series bars | repeated `bar` directives | `supported` | Per-category bar groups are split into stable per-series sub-bars. |
+| Line-only charts | repeated `line` directives | `supported` | Charts do not require a bar series as long as at least one line series is present. |
+| Stable y-axis ticks | generated | `supported` | Tick spacing uses deterministic, human-readable intervals derived from the declared range. |
+| Horizontal modifier | `xychart-beta horizontal` | `not-started` | Explicitly rejected today. |
+| Numeric x-axis ranges | `x-axis "Year" 2020 --> 2023` | `not-started` | Explicitly rejected today. |
+| Legends / Mermaid theming / palette control | Mermaid config and legend behavior | `not-started` | No legend rendering or Mermaid theme parity yet; chart colors use converter defaults. |
+
 ## Interpretation
 
 - The converter is **not feature-complete for Mermaid flowcharts**.
-- The converter has **initial, partial support** for sequence, state, and gantt diagrams; other Mermaid diagram families remain unimplemented.
+- The converter has **initial, partial support** for sequence, state, gantt, and xychart diagrams; other Mermaid diagram families remain unimplemented.
 - This matrix should be updated whenever parser or generator support changes, so documentation and implementation stay aligned.

@@ -17,6 +17,7 @@ For the current implementation status by Mermaid diagram family and by flowchart
 - initial `sequenceDiagram` support for participants, messages, self-messages, notes, explicit activation bars, and `opt` / `loop` control frames
 - initial `stateDiagram-v2` / `stateDiagram` support for transitions, start/end markers, and right-of notes
 - initial `gantt` support for quarter-based delivery-plan timelines (`dateFormat YYYY-QQ`, sections, and explicit task bars)
+- initial `xychart-beta` support for optional `title`, categorical `x-axis`, ranged `y-axis`, and one or more `bar` and/or `line` series
 - Conversion to a single `.drawio` document
 - One page per Mermaid diagram
 - One default layer per page

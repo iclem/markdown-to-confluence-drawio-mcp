@@ -470,6 +470,215 @@ write use case"]
     expect(diagram.nodes.find((node) => node.id === "gantt-task-bar-d1")!.width).toBeGreaterThan(10000);
   });
 
+  it("parses a supported xychart-beta bar chart into explicit layout nodes", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        xychart-beta
+        title "Monthly Revenue"
+        x-axis [Jan, Feb, Mar, Apr]
+        y-axis "Revenue" 0 --> 100
+        bar [30, 60, 45, 80]
+      `,
+    });
+
+    expect(diagram.pageName).toBe("Monthly Revenue");
+    expect(diagram.diagramType).toBe("xychart");
+    expect(diagram.edges).toHaveLength(2);
+    expect(diagram.nodes.find((node) => node.id === "xychart-title")).toMatchObject({
+      label: "Monthly Revenue",
+      shape: "text",
+      width: 556,
+      height: 36,
+    });
+    expect(diagram.nodes.find((node) => node.id === "xychart-bar-0-0")).toMatchObject({
+      shape: "rounded-rectangle",
+      x: 84,
+      y: 336,
+      width: 56,
+      height: 108,
+    });
+    expect(diagram.nodes.find((node) => node.id === "xychart-bar-0-3")).toMatchObject({
+      x: 444,
+      y: 156,
+      width: 56,
+      height: 288,
+    });
+    expect(diagram.nodes.filter((node) => node.id.startsWith("xychart-y-tick-")).map((node) => node.label)).toEqual([
+      "0",
+      "20",
+      "40",
+      "60",
+      "80",
+      "100",
+    ]);
+    expect(diagram.nodes.filter((node) => node.id.startsWith("xychart-x-label-")).map((node) => node.x)).toEqual([
+      52,
+      172,
+      292,
+      412,
+    ]);
+  });
+
+  it("parses a supported mixed xychart-beta into explicit bar and line primitives", () => {
+    const diagram = parseMermaid({
+      sourceName: "sales-trend.mermaid",
+      mermaid: `
+        xychart-beta
+        x-axis [Q1, Q2, Q3, Q4]
+        y-axis "Sales" 0 --> 200
+        bar [50, 80, 120, 90]
+        line [40, 100, 110, 85]
+      `,
+    });
+
+    expect(diagram.pageName).toBe("sales-trend");
+    expect(diagram.diagramType).toBe("xychart");
+    expect(diagram.edges.map(stripEdgePoints)).toEqual([
+      {
+        sourceId: "xychart-axis-x-start",
+        targetId: "xychart-axis-x-end",
+        label: undefined,
+        kind: "plain",
+      },
+      {
+        sourceId: "xychart-axis-y-start",
+        targetId: "xychart-axis-y-end",
+        label: undefined,
+        kind: "plain",
+      },
+      {
+        sourceId: "xychart-line-point-0-0",
+        targetId: "xychart-line-point-0-1",
+        label: undefined,
+        kind: "plain",
+      },
+      {
+        sourceId: "xychart-line-point-0-1",
+        targetId: "xychart-line-point-0-2",
+        label: undefined,
+        kind: "plain",
+      },
+      {
+        sourceId: "xychart-line-point-0-2",
+        targetId: "xychart-line-point-0-3",
+        label: undefined,
+        kind: "plain",
+      },
+    ]);
+    expect(diagram.nodes.find((node) => node.id === "xychart-line-point-0-0")).toMatchObject({
+      shape: "ellipse",
+      x: 106,
+      y: 330,
+      width: 12,
+      height: 12,
+    });
+    expect(diagram.nodes.find((node) => node.id === "xychart-line-point-0-2")).toMatchObject({
+      x: 346,
+      y: 204,
+      width: 12,
+      height: 12,
+    });
+  });
+
+  it("rejects unsupported xychart-beta header modifiers explicitly", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          xychart-beta horizontal
+          x-axis [Jan, Feb]
+          y-axis 0 --> 10
+          bar [1, 2]
+        `,
+      }),
+    ).toThrow(/unsupported_construct/);
+  });
+
+  it("rejects numeric x-axis ranges for xychart-beta explicitly", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          xychart-beta
+          x-axis "Year" 2020 --> 2023
+          y-axis 0 --> 100
+          bar [10, 20, 30, 40]
+        `,
+      }),
+    ).toThrow(/unsupported_construct/);
+  });
+
+  it("rejects malformed xychart-beta series lengths explicitly", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          xychart-beta
+          x-axis [Jan, Feb, Mar]
+          y-axis 0 --> 100
+          bar [10, 20]
+        `,
+      }),
+    ).toThrow(/parse_error/);
+  });
+
+  it("parses grouped xychart-beta bar series into separate bar primitives", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        xychart-beta
+        title "Judge Phase Impact"
+        x-axis ["Online (Flash)", "Batch (Flash)"]
+        y-axis "USD" 0 --> 0.50
+        bar [0.250, 0.162]
+        bar [0.407, 0.136]
+      `,
+    });
+
+    expect(diagram.nodes.filter((node) => node.id.startsWith("xychart-bar-"))).toHaveLength(4);
+    expect(diagram.nodes.find((node) => node.id === "xychart-bar-0-0")).toMatchObject({
+      x: 69,
+      width: 39,
+      fillColor: "#dae8fc",
+    });
+    expect(diagram.nodes.find((node) => node.id === "xychart-bar-1-0")).toMatchObject({
+      x: 116,
+      width: 39,
+      fillColor: "#d5e8d4",
+    });
+  });
+
+  it("parses line-only xychart-beta charts with multiple series", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        xychart-beta
+        x-axis ["10K", "100K", "1M"]
+        y-axis "USD" 0 --> 300
+        line [2.50, 25, 250]
+        line [1.62, 16.2, 162]
+        line [0.82, 8.2, 82]
+        line [0.56, 5.6, 56]
+      `,
+    });
+
+    expect(diagram.nodes.filter((node) => node.id.startsWith("xychart-line-point-"))).toHaveLength(12);
+    expect(diagram.edges).toHaveLength(10);
+    expect(diagram.nodes.find((node) => node.id === "xychart-line-point-3-2")).toMatchObject({
+      shape: "ellipse",
+      x: 346,
+      y: 335,
+      strokeColor: "#b85450",
+    });
+  });
+
+  it("rejects xychart-beta diagrams without any bar or line series explicitly", () => {
+    expect(() =>
+      parseMermaid({
+        mermaid: `
+          xychart-beta
+          x-axis [Jan, Feb, Mar]
+          y-axis 0 --> 100
+        `,
+      }),
+    ).toThrow(/requires at least one bar or line series/);
+  });
+
   it("parses sequence participants, messages, self-messages, and notes", () => {
     const diagram = parseMermaid({
       sourceName: "catalogue-publication-sequence.mermaid",

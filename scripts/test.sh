@@ -6,6 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "${ROOT_DIR}"
 
+./scripts/ensure-node-platform-deps.sh "${ROOT_DIR}/parser"
+
 echo "==> Parser tests"
 npm --prefix parser test
 

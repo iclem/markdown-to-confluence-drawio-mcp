@@ -42,11 +42,7 @@ PAGE_NAME="${PAGE_NAME%.*}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
-if [[ ! -d "${PARSER_DIR}/node_modules" ]]; then
-  pushd "${PARSER_DIR}" >/dev/null
-  npm ci
-  popd >/dev/null
-fi
+./scripts/ensure-node-platform-deps.sh "${PARSER_DIR}"
 
 if [[ ! -f "${PARSER_DIR}/dist/cli.js" ]]; then
   pushd "${PARSER_DIR}" >/dev/null

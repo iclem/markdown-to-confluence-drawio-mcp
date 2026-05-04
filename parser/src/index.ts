@@ -5,7 +5,7 @@ export interface MermaidParseRequest {
   sourceName?: string;
 }
 
-export type DiagramType = "flowchart" | "sequence" | "state" | "gantt";
+export type DiagramType = "flowchart" | "sequence" | "state" | "gantt" | "xychart";
 export type LayoutDirection = "TD" | "TB" | "LR" | "RL";
 
 export type NodeShape =
@@ -156,6 +156,50 @@ const GANTT_SECTION_GAP = 16;
 const GANTT_BAR_VERTICAL_PADDING = 4;
 const GANTT_BAR_HORIZONTAL_PADDING = 8;
 const GANTT_DAY_MS = 24 * 60 * 60 * 1000;
+const XYCHART_MARGIN_TOP = 24;
+const XYCHART_MARGIN_RIGHT = 24;
+const XYCHART_MARGIN_BOTTOM = 24;
+const XYCHART_TITLE_HEIGHT = 36;
+const XYCHART_AXIS_LABEL_HEIGHT = 24;
+const XYCHART_CATEGORY_LABEL_HEIGHT = 24;
+const XYCHART_PLOT_HEIGHT = 360;
+const XYCHART_CATEGORY_BAND_WIDTH = 120;
+const XYCHART_BAR_GROUP_WIDTH_RATIO = 0.72;
+const XYCHART_BAR_GAP = 8;
+const XYCHART_BAR_MAX_WIDTH = 56;
+const XYCHART_LINE_MARKER_SIZE = 12;
+const XYCHART_SERIES_COLORS = [
+  {
+    fillColor: "#dae8fc",
+    strokeColor: "#6c8ebf",
+    fontColor: "#1f1f1f",
+  },
+  {
+    fillColor: "#d5e8d4",
+    strokeColor: "#82b366",
+    fontColor: "#1f1f1f",
+  },
+  {
+    fillColor: "#fff2cc",
+    strokeColor: "#d6b656",
+    fontColor: "#1f1f1f",
+  },
+  {
+    fillColor: "#f8cecc",
+    strokeColor: "#b85450",
+    fontColor: "#1f1f1f",
+  },
+  {
+    fillColor: "#e1d5e7",
+    strokeColor: "#9673a6",
+    fontColor: "#1f1f1f",
+  },
+  {
+    fillColor: "#f5f5f5",
+    strokeColor: "#666666",
+    fontColor: "#1f1f1f",
+  },
+] satisfies Array<Pick<IntermediateNode, "fillColor" | "strokeColor" | "fontColor">>;
 
 interface ScanState {
   bracketDepth: number;
@@ -178,6 +222,17 @@ interface ParsedGanttTask {
   startPosition: number;
   endPosition: number;
   tags: string[];
+}
+
+interface ParsedXychart {
+  title?: string;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  categories: string[];
+  yMin: number;
+  yMax: number;
+  barSeries: number[][];
+  lineSeries: number[][];
 }
 
 interface GanttTimelineConfig {
@@ -353,6 +408,13 @@ function parseHeader(line: string): ParsedHeader {
 
   if (line === "gantt") {
     return { diagramType: "gantt" };
+  }
+
+  if (tokens[0] === "xychart-beta") {
+    if (tokens.length > 1) {
+      throw new Error(`unsupported_construct: "${line}"`);
+    }
+    return { diagramType: "xychart" };
   }
 
   throw new Error(`unsupported_dialect: unsupported header "${line}"`);
@@ -1602,6 +1664,432 @@ function parseGanttDiagram(request: MermaidParseRequest, lines: string[]): Inter
   };
 }
 
+function parseXychartStringArray(rawValue: string, line: string): string[] {
+  const values = splitTopLevel(rawValue, ",").map((entry) => normalizeLabel(entry).trim());
+  if (values.length === 0 || values.some((value) => value.length === 0)) {
+    throw new Error(`parse_error: malformed x-axis "${line}"`);
+  }
+  return values;
+}
+
+function parseXychartNumberArray(rawValue: string, line: string): number[] {
+  const values = splitTopLevel(rawValue, ",").map((entry) => entry.trim());
+  if (values.length === 0 || values.some((value) => value.length === 0)) {
+    throw new Error(`parse_error: malformed series "${line}"`);
+  }
+
+  return values.map((value) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) {
+      throw new Error(`parse_error: malformed series "${line}"`);
+    }
+    return parsed;
+  });
+}
+
+function parseXychartXAxis(line: string): { label?: string; categories: string[] } {
+  const body = line.slice("x-axis".length).trim();
+  if (body.includes("-->")) {
+    throw new Error(`unsupported_construct: "${line}"`);
+  }
+
+  const bracketStart = body.indexOf("[");
+  const bracketEnd = body.lastIndexOf("]");
+  if (bracketStart === -1 || bracketEnd !== body.length - 1 || bracketEnd <= bracketStart) {
+    throw new Error(`parse_error: malformed x-axis "${line}"`);
+  }
+
+  const rawLabel = body.slice(0, bracketStart).trim();
+  return {
+    label: rawLabel ? normalizeLabel(rawLabel) : undefined,
+    categories: parseXychartStringArray(body.slice(bracketStart + 1, bracketEnd), line),
+  };
+}
+
+function parseXychartYAxis(line: string): { label?: string; min: number; max: number } {
+  const body = line.slice("y-axis".length).trim();
+  const match = /^(?:(?<label>.+?)\s+)?(?<min>-?\d+(?:\.\d+)?)\s*-->\s*(?<max>-?\d+(?:\.\d+)?)$/.exec(body);
+  if (!match?.groups) {
+    throw new Error(`parse_error: malformed y-axis "${line}"`);
+  }
+
+  const min = Number.parseFloat(match.groups.min);
+  const max = Number.parseFloat(match.groups.max);
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    throw new Error(`parse_error: malformed y-axis "${line}"`);
+  }
+
+  return {
+    label: match.groups.label ? normalizeLabel(match.groups.label) : undefined,
+    min,
+    max,
+  };
+}
+
+function estimateTextWidth(text: string, minimum = 24): number {
+  const lines = text.split(/\r\n|\r|\n/, -1);
+  const longestLineLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
+  return Math.max(minimum, longestLineLength * 8 + 12);
+}
+
+function roundXychartValue(value: number): number {
+  return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+function getXychartNiceInterval(min: number, max: number): number {
+  const rawInterval = (max - min) / 5;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawInterval)));
+  const residual = rawInterval / magnitude;
+  if (residual <= 1.5) {
+    return magnitude;
+  }
+  if (residual <= 3) {
+    return 2 * magnitude;
+  }
+  if (residual <= 7) {
+    return 5 * magnitude;
+  }
+  return 10 * magnitude;
+}
+
+function formatXychartTick(value: number): string {
+  if (Number.isInteger(value)) {
+    return `${value}`;
+  }
+
+  if (Math.abs(value) >= 10) {
+    return value.toFixed(1).replace(/\.0$/, "");
+  }
+
+  return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+}
+
+function buildXychartTicks(min: number, max: number): number[] {
+  if (max <= min) {
+    return [min];
+  }
+
+  const interval = getXychartNiceInterval(min, max);
+  const ticks = [roundXychartValue(min)];
+  let value = Math.ceil(min / interval) * interval;
+  while (value < max) {
+    const rounded = roundXychartValue(value);
+    if (rounded > min && rounded < max) {
+      ticks.push(rounded);
+    }
+    value += interval;
+  }
+  ticks.push(roundXychartValue(max));
+  return Array.from(new Set(ticks)).sort((left, right) => left - right);
+}
+
+function getXychartSeriesColors(seriesIndex: number): Pick<IntermediateNode, "fillColor" | "strokeColor" | "fontColor"> {
+  return XYCHART_SERIES_COLORS[seriesIndex % XYCHART_SERIES_COLORS.length];
+}
+
+function createXychartAnchorNode(id: string, x: number, y: number): IntermediateNode {
+  return {
+    id,
+    label: "",
+    shape: "text",
+    x,
+    y,
+    width: 1,
+    height: 1,
+  };
+}
+
+function parseXychartDiagram(request: MermaidParseRequest, lines: string[]): IntermediateDiagram {
+  let title: string | undefined;
+  let xAxisLabel: string | undefined;
+  let categories: string[] | undefined;
+  let yAxisLabel: string | undefined;
+  let yMin: number | undefined;
+  let yMax: number | undefined;
+  const barSeries: number[][] = [];
+  const lineSeries: number[][] = [];
+
+  for (const line of lines.slice(1)) {
+    if (line.startsWith("title ")) {
+      if (title !== undefined) {
+        throw new Error(`parse_error: duplicate directive "${line}"`);
+      }
+      title = normalizeLabel(line.slice("title".length).trim());
+      continue;
+    }
+
+    if (line.startsWith("x-axis ")) {
+      if (categories !== undefined) {
+        throw new Error(`parse_error: duplicate directive "${line}"`);
+      }
+      const xAxis = parseXychartXAxis(line);
+      xAxisLabel = xAxis.label;
+      categories = xAxis.categories;
+      continue;
+    }
+
+    if (line.startsWith("y-axis ")) {
+      if (yMin !== undefined || yMax !== undefined) {
+        throw new Error(`parse_error: duplicate directive "${line}"`);
+      }
+      const yAxis = parseXychartYAxis(line);
+      yAxisLabel = yAxis.label;
+      yMin = yAxis.min;
+      yMax = yAxis.max;
+      continue;
+    }
+
+    const barMatch = /^bar\s+\[(?<values>[\s\S]+)\]$/i.exec(line);
+    if (barMatch?.groups?.values) {
+      barSeries.push(parseXychartNumberArray(barMatch.groups.values, line));
+      continue;
+    }
+
+    const lineMatch = /^line\s+\[(?<values>[\s\S]+)\]$/i.exec(line);
+    if (lineMatch?.groups?.values) {
+      lineSeries.push(parseXychartNumberArray(lineMatch.groups.values, line));
+      continue;
+    }
+
+    throw new Error(`unsupported_construct: "${line}"`);
+  }
+
+  if (!categories) {
+    throw new Error('parse_error: xychart is missing categorical x-axis labels');
+  }
+  if (yMin === undefined || yMax === undefined) {
+    throw new Error("parse_error: xychart is missing a ranged y-axis");
+  }
+  if (barSeries.length === 0 && lineSeries.length === 0) {
+    throw new Error("parse_error: xychart requires at least one bar or line series");
+  }
+  if (barSeries.some((series) => series.length !== categories.length)) {
+    throw new Error("parse_error: bar series length must match x-axis category count");
+  }
+  if (lineSeries.some((series) => series.length !== categories.length)) {
+    throw new Error("parse_error: line series length must match x-axis category count");
+  }
+
+  for (const value of [...barSeries.flat(), ...lineSeries.flat()]) {
+    if (value < yMin || value > yMax) {
+      throw new Error(`parse_error: xychart value ${value} is outside the y-axis range`);
+    }
+  }
+
+  const parsed: ParsedXychart = {
+    title,
+    xAxisLabel,
+    yAxisLabel,
+    categories,
+    yMin,
+    yMax,
+    barSeries,
+    lineSeries,
+  };
+
+  const yTicks = buildXychartTicks(parsed.yMin, parsed.yMax);
+  const maxTickLabelWidth = Math.max(...yTicks.map((tick) => estimateTextWidth(formatXychartTick(tick), 32)));
+  const plotX = maxTickLabelWidth + 16;
+  const plotY =
+    XYCHART_MARGIN_TOP +
+    (parsed.title ? XYCHART_TITLE_HEIGHT : 0) +
+    (parsed.yAxisLabel ? XYCHART_AXIS_LABEL_HEIGHT : 0);
+  const bandWidth = XYCHART_CATEGORY_BAND_WIDTH;
+  const plotWidth = bandWidth * parsed.categories.length;
+  const plotHeight = XYCHART_PLOT_HEIGHT;
+  const plotBottom = plotY + plotHeight;
+  const totalWidth = plotX + plotWidth + XYCHART_MARGIN_RIGHT;
+  const totalHeight =
+    plotBottom +
+    XYCHART_CATEGORY_LABEL_HEIGHT +
+    (parsed.xAxisLabel ? XYCHART_AXIS_LABEL_HEIGHT : 0) +
+    XYCHART_MARGIN_BOTTOM;
+  const baselineValue = parsed.yMin <= 0 && parsed.yMax >= 0 ? 0 : parsed.yMin;
+  const scaleY = (value: number): number =>
+    plotBottom - ((value - parsed.yMin) / (parsed.yMax - parsed.yMin || 1)) * plotHeight;
+  const baselineY = Math.round(scaleY(baselineValue));
+
+  const nodes: IntermediateNode[] = [
+    createXychartAnchorNode("xychart-axis-x-start", plotX, baselineY),
+    createXychartAnchorNode("xychart-axis-x-end", plotX + plotWidth, baselineY),
+    createXychartAnchorNode("xychart-axis-y-start", plotX, plotY),
+    createXychartAnchorNode("xychart-axis-y-end", plotX, plotBottom),
+  ];
+
+  if (parsed.title) {
+    nodes.push({
+      id: "xychart-title",
+      label: parsed.title,
+      shape: "text",
+      fontColor: "#1f1f1f",
+      x: 0,
+      y: 0,
+      width: totalWidth,
+      height: XYCHART_TITLE_HEIGHT,
+    });
+  }
+
+  if (parsed.yAxisLabel) {
+    nodes.push({
+      id: "xychart-y-axis-label",
+      label: parsed.yAxisLabel,
+      shape: "text",
+      fontColor: "#333333",
+      x: 0,
+      y: plotY - XYCHART_AXIS_LABEL_HEIGHT,
+      width: plotX + 8,
+      height: XYCHART_AXIS_LABEL_HEIGHT,
+    });
+  }
+
+  yTicks.forEach((tick, index) => {
+    nodes.push({
+      id: `xychart-y-tick-${index}`,
+      label: formatXychartTick(tick),
+      shape: "text",
+      fontColor: "#333333",
+      x: 0,
+      y: Math.round(scaleY(tick) - 10),
+      width: maxTickLabelWidth,
+      height: 20,
+    });
+  });
+
+  parsed.categories.forEach((category, index) => {
+    const bandLeft = plotX + index * bandWidth;
+    nodes.push({
+      id: `xychart-x-label-${index}`,
+      label: category,
+      shape: "text",
+      fontColor: "#333333",
+      x: bandLeft,
+      y: plotBottom + 4,
+      width: bandWidth,
+      height: XYCHART_CATEGORY_LABEL_HEIGHT,
+    });
+  });
+
+  if (parsed.xAxisLabel) {
+    nodes.push({
+      id: "xychart-x-axis-label",
+      label: parsed.xAxisLabel,
+      shape: "text",
+      fontColor: "#333333",
+      x: plotX,
+      y: plotBottom + XYCHART_CATEGORY_LABEL_HEIGHT,
+      width: plotWidth,
+      height: XYCHART_AXIS_LABEL_HEIGHT,
+    });
+  }
+
+  if (parsed.barSeries.length > 0) {
+    const maxBarGroupWidth = Math.floor(bandWidth * XYCHART_BAR_GROUP_WIDTH_RATIO);
+    const barWidth = Math.max(
+      12,
+      Math.min(
+        XYCHART_BAR_MAX_WIDTH,
+        Math.floor((maxBarGroupWidth - XYCHART_BAR_GAP * (parsed.barSeries.length - 1)) / parsed.barSeries.length),
+      ),
+    );
+    const barGroupWidth = barWidth * parsed.barSeries.length + XYCHART_BAR_GAP * (parsed.barSeries.length - 1);
+
+    parsed.barSeries.forEach((series, seriesIndex) => {
+      const seriesColors = getXychartSeriesColors(seriesIndex);
+      series.forEach((value, index) => {
+        const bandLeft = plotX + index * bandWidth;
+        const centerX = bandLeft + bandWidth / 2;
+        const barLeft =
+          centerX - barGroupWidth / 2 + seriesIndex * (barWidth + XYCHART_BAR_GAP);
+        const valueY = Math.round(scaleY(value));
+        nodes.push({
+          id: `xychart-bar-${seriesIndex}-${index}`,
+          label: "",
+          shape: "rounded-rectangle",
+          ...seriesColors,
+          x: Math.round(barLeft),
+          y: Math.min(valueY, baselineY),
+          width: barWidth,
+          height: Math.max(1, Math.abs(baselineY - valueY)),
+        });
+      });
+    });
+  }
+
+  parsed.lineSeries.forEach((series, seriesIndex) => {
+    const seriesColors = getXychartSeriesColors(seriesIndex);
+    series.forEach((value, index) => {
+      const bandLeft = plotX + index * bandWidth;
+      const centerX = Math.round(bandLeft + bandWidth / 2);
+      const centerY = Math.round(scaleY(value));
+      nodes.push({
+        id: `xychart-line-point-${seriesIndex}-${index}`,
+        label: "",
+        shape: "ellipse",
+        fillColor: "#ffffff",
+        strokeColor: seriesColors.strokeColor,
+        fontColor: seriesColors.fontColor,
+        x: centerX - Math.floor(XYCHART_LINE_MARKER_SIZE / 2),
+        y: centerY - Math.floor(XYCHART_LINE_MARKER_SIZE / 2),
+        width: XYCHART_LINE_MARKER_SIZE,
+        height: XYCHART_LINE_MARKER_SIZE,
+      });
+    });
+  });
+
+  const edges: IntermediateEdge[] = [
+    {
+      sourceId: "xychart-axis-x-start",
+      targetId: "xychart-axis-x-end",
+      kind: "plain",
+      points: [
+        { x: plotX, y: baselineY },
+        { x: plotX + plotWidth, y: baselineY },
+      ],
+    },
+    {
+      sourceId: "xychart-axis-y-start",
+      targetId: "xychart-axis-y-end",
+      kind: "plain",
+      points: [
+        { x: plotX, y: plotY },
+        { x: plotX, y: plotBottom },
+      ],
+    },
+  ];
+
+  parsed.lineSeries.forEach((series, seriesIndex) => {
+    for (let index = 0; index < series.length - 1; index += 1) {
+      const sourceX = Math.round(plotX + index * bandWidth + bandWidth / 2);
+      const sourceY = Math.round(scaleY(series[index]));
+      const targetX = Math.round(plotX + (index + 1) * bandWidth + bandWidth / 2);
+      const targetY = Math.round(scaleY(series[index + 1]));
+      edges.push({
+        sourceId: `xychart-line-point-${seriesIndex}-${index}`,
+        targetId: `xychart-line-point-${seriesIndex}-${index + 1}`,
+        kind: "plain",
+        points: [
+          { x: sourceX, y: sourceY },
+          { x: targetX, y: targetY },
+        ],
+      });
+    }
+  });
+
+  return {
+    pageName: parsed.title ?? derivePageName(request.sourceName),
+    diagramType: "xychart",
+    nodes,
+    edges,
+    subgraphs: [],
+    sequenceParticipants: [],
+    sequenceMessages: [],
+    sequenceNotes: [],
+    sequenceActivations: [],
+    sequenceFrames: [],
+    warnings: [],
+  };
+}
+
 function parseStateDirection(line: string): LayoutDirection | undefined {
   const match = /^direction\s+(TD|TB|LR|RL)$/i.exec(line);
   if (!match) {
@@ -1923,6 +2411,9 @@ export function parseMermaid(request: MermaidParseRequest): IntermediateDiagram 
   }
   if (header.diagramType === "gantt") {
     return parseGanttDiagram(request, lines);
+  }
+  if (header.diagramType === "xychart") {
+    return parseXychartDiagram(request, lines);
   }
 
   return parseFlowchart(request, lines, header.direction!);
