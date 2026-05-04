@@ -351,6 +351,19 @@ function splitTopLevel(input: string, separator: string): string[] {
   return result;
 }
 
+function containsTopLevelToken(input: string, token: string): boolean {
+  let state = createScanState();
+
+  for (let index = 0; index < input.length; index += 1) {
+    if (isTopLevel(state) && input.startsWith(token, index)) {
+      return true;
+    }
+    state = advanceScanState(state, input[index]);
+  }
+
+  return false;
+}
+
 function normalizeLines(mermaid: string, splitSemicolons = false): string[] {
   const statements: string[] = [];
   let current = "";
@@ -1689,7 +1702,7 @@ function parseXychartNumberArray(rawValue: string, line: string): number[] {
 
 function parseXychartXAxis(line: string): { label?: string; categories: string[] } {
   const body = line.slice("x-axis".length).trim();
-  if (body.includes("-->")) {
+  if (containsTopLevelToken(body, "-->")) {
     throw new Error(`unsupported_construct: "${line}"`);
   }
 

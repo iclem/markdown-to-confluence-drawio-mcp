@@ -580,6 +580,22 @@ write use case"]
     });
   });
 
+  it("supports quoted x-axis category labels containing arrows", () => {
+    const diagram = parseMermaid({
+      mermaid: `
+        xychart-beta
+        x-axis ["A --> B", "B --> C"]
+        y-axis 0 --> 10
+        bar [3, 5]
+      `,
+    });
+
+    expect(diagram.nodes.filter((node) => node.id.startsWith("xychart-x-label-")).map((node) => node.label)).toEqual([
+      "A --> B",
+      "B --> C",
+    ]);
+  });
+
   it("rejects unsupported xychart-beta header modifiers explicitly", () => {
     expect(() =>
       parseMermaid({
