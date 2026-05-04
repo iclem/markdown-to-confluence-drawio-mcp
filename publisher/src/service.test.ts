@@ -486,6 +486,75 @@ describe("DrawioPublisherService", () => {
     }
   });
 
+  it("keeps xychart publication fallback behavior explicit per block", async () => {
+    const { client, pageId } = createExistingWidgetFixture();
+    const { dir, drawioPath, previewPath } = createTempDiagramFiles("quarterly-sales-01.drawio", 900, 500);
+    const service = new DrawioPublisherService(
+      client as never,
+      async (mermaid, diagramName) => {
+        if (mermaid.includes("horizontal")) {
+          expect(diagramName).toBe("quarterly-sales-02.drawio");
+          throw new Error('unsupported_construct: "xychart-beta horizontal"');
+        }
+        expect(mermaid).toContain("xychart-beta");
+        expect(diagramName).toBe("quarterly-sales-01.drawio");
+        return {
+          mermaidPath: `${dir}/input.mermaid`,
+          drawioPath,
+          previewPath,
+          cleanup: async () => undefined,
+        };
+      },
+    );
+
+    try {
+      const result = await service.createPageFromMarkdown({
+        title: "Quarterly Sales",
+        markdown: `# Quarterly Sales\n\n\`\`\`mermaid\nxychart-beta\ntitle "Quarterly Sales"\nx-axis [Q1, Q2, Q3, Q4]\ny-axis "Revenue" 0 --> 200\nbar [50, 80, 120, 90]\nline [40, 100, 110, 85]\n\`\`\`\n\n\`\`\`mermaid\nxychart-beta horizontal\nx-axis [Q1, Q2]\ny-axis 0 --> 100\nbar [30, 40]\n\`\`\`\n`,
+        sourceName: "quarterly-sales.md",
+        siblingPageId: pageId,
+        spaceKey: "~user",
+      });
+
+      expect(result.page.id).toBe("created-page");
+      expect(result.source).toBe("quarterly-sales.md");
+      expect(result.mermaidBlocks).toBe(2);
+      expect(result.convertedBlocks).toBe(1);
+      expect(result.fallbackBlocks).toBe(1);
+      expect(result.widgetNames).toEqual(["quarterly-sales-01.drawio"]);
+      expect(client.pageUpdateMessages).toContain("Publish quarterly-sales.md");
+      expect(client.attachmentMutations).toEqual([
+        { pageId: "created-page", remoteFileName: "quarterly-sales-01.drawio" },
+        { pageId: "created-page", remoteFileName: "quarterly-sales-01.drawio.png" },
+      ]);
+      expect((client as unknown as { page: ConfluencePage }).page.body?.atlas_doc_format?.value).toEqual(
+        expect.objectContaining({
+          content: expect.arrayContaining([
+            expect.objectContaining({ type: "extension" }),
+            expect.objectContaining({
+              type: "expand",
+              attrs: expect.objectContaining({ title: "Original Mermaid source" }),
+            }),
+            expect.objectContaining({
+              type: "paragraph",
+              content: expect.arrayContaining([
+                expect.objectContaining({
+                  text: expect.stringContaining('Mermaid block 2 could not be converted automatically: unsupported_construct: "xychart-beta horizontal"'),
+                }),
+              ]),
+            }),
+            expect.objectContaining({
+              type: "codeBlock",
+              attrs: expect.objectContaining({ language: "mermaid" }),
+            }),
+          ]),
+        }),
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("creates a sibling page from a markdown file path", async () => {
     const { client, pageId } = createExistingWidgetFixture();
     const dir = mkdtempSync(join(tmpdir(), "drawio-markdown-"));
