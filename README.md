@@ -35,6 +35,33 @@ Build the local image:
 make image-mcp
 ```
 
+Export one supported Confluence credential set before starting the server.
+
+Direct publisher variables with email + API token:
+
+```bash
+export CONFLUENCE_BASE_URL="https://your-site.atlassian.net"
+export CONFLUENCE_EMAIL="you@example.com"
+export CONFLUENCE_API_TOKEN="..."
+```
+
+or direct publisher variables with a bearer token:
+
+```bash
+export CONFLUENCE_BASE_URL="https://your-site.atlassian.net"
+export CONFLUENCE_BEARER_TOKEN="..."
+```
+
+or the Copilot-style fallback variables:
+
+```bash
+export COPILOT_MCP_CONFLUENCE_URL="https://your-site.atlassian.net"
+export COPILOT_MCP_CONFLUENCE_USERNAME="you@example.com"
+export COPILOT_MCP_CONFLUENCE_API_TOKEN="..."
+```
+
+The local stdio helper forwards both the direct `CONFLUENCE_*` variables and the Copilot-style fallback variables into the container.
+
 Run local Docker stdio from the workspace you want mounted:
 
 ```bash
@@ -51,6 +78,8 @@ MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
 This helper launches `docker run` with the active workspace bind-mounted at the same absolute path, so file-based Markdown tools can read project-local documents without a separately managed HTTP server.
 
 Or start the HTTP MCP server:
+
+The HTTP example below shows the Copilot-style variables because they are common in MCP setups, but the direct `CONFLUENCE_*` variables work there too.
 
 ```bash
 docker run --rm \
