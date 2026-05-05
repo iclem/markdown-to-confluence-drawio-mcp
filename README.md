@@ -77,6 +77,8 @@ MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
 
 This helper launches `docker run` with the active workspace bind-mounted at the same absolute path, so file-based Markdown tools can read project-local documents without a separately managed HTTP server.
 
+If you are using only a published image from a registry and do not have a local checkout, see `doc/user-manual.md` for direct MCP configuration examples that run `docker` without the repository helper script.
+
 Or start the HTTP MCP server:
 
 The HTTP example below shows the Copilot-style variables because they are common in MCP setups, but the direct `CONFLUENCE_*` variables work there too.

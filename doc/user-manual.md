@@ -126,6 +126,12 @@ docker run --rm -i \
 
 Use local Docker stdio when your agent prefers command-based MCP registration scoped to the current workspace. Use HTTP when you want a long-lived shared container and URL-based registration.
 
+If you do **not** keep a local checkout and instead pull the packaged image from a registry, you can still use stdio mode by registering a direct `docker run` command. The examples below assume:
+
+- macOS or Linux
+- the MCP client launches the command with its cwd set to the workspace that should be mounted
+- you replace `<your-registry>/markdown-to-confluence-drawio-mcp:<tag>` with your published image reference
+
 ## Provider installation
 
 ### GitHub Copilot CLI
@@ -159,6 +165,23 @@ That checked-in example uses the packaged Docker image with stdio transport.
 
 For local project-scoped stdio use, register `./scripts/confluence-drawio-mcp.sh` as the command from the workspace you want mounted.
 
+If you prefer a registry-only setup without a local checkout, a direct stdio registration can use `docker run` through the shell:
+
+```json
+{
+  "mcpServers": {
+    "markdown-to-confluence-drawio-mcp": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+      ]
+    }
+  }
+}
+```
+
 ### Codex
 
 Typical global config file:
@@ -178,6 +201,17 @@ If you prefer per-project setup, place the same block in:
 
 ```text
 .codex/config.toml
+```
+
+Registry-only stdio example:
+
+```toml
+[mcp_servers.markdown-to-confluence-drawio-mcp]
+command = "sh"
+args = [
+  "-c",
+  "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+]
 ```
 
 ### Claude Code / Claude Desktop
@@ -203,6 +237,23 @@ Common locations:
   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
   - Linux: `~/.config/Claude/claude_desktop_config.json`
   - Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
+
+Registry-only stdio example:
+
+```json
+{
+  "mcpServers": {
+    "markdown-to-confluence-drawio-mcp": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+      ]
+    }
+  }
+}
+```
 
 ### Gemini CLI
 
