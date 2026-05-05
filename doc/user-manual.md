@@ -87,15 +87,44 @@ http://127.0.0.1:3000/healthz
 
 ### Stdio MCP
 
-Stdio is still useful when the host agent wants to spawn the container directly.
+Stdio is useful when the host agent wants to spawn the container directly against the current workspace.
+
+From the workspace you want mounted:
+
+```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+If the helper is launched from another directory, set the workspace explicitly:
+
+```bash
+MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
+  ./scripts/confluence-drawio-mcp.sh
+```
+
+The helper launches the packaged image through `docker run` with:
+
+- the active workspace bind-mounted at the same absolute path
+- the container working directory set to that workspace path
+- both direct `CONFLUENCE_*` variables and Copilot-style fallback variables forwarded into the container
+
+The raw Docker equivalent is:
 
 ```bash
 docker run --rm -i \
+  -v "$PWD":"$PWD" \
+  -w "$PWD" \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
+  -e CONFLUENCE_BEARER_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local mcp
 ```
+
+Use local Docker stdio when your agent prefers command-based MCP registration scoped to the current workspace. Use HTTP when you want a long-lived shared container and URL-based registration.
 
 ## Provider installation
 
@@ -127,6 +156,8 @@ For GitHub Copilot cloud agents, start from the repository-root example:
 ```
 
 That checked-in example uses the packaged Docker image with stdio transport.
+
+For local project-scoped stdio use, register `./scripts/confluence-drawio-mcp.sh` as the command from the workspace you want mounted.
 
 ### Codex
 
@@ -209,7 +240,7 @@ Recommended rule:
 - bind-mount the directory containing the Markdown file into the container
 - preserve the same absolute path inside the container when practical
 
-That is why the HTTP startup examples mount `"$PWD":"$PWD"` when the document lives under the current repository.
+That is why the HTTP startup examples mount `"$PWD":"$PWD"` when the document lives under the current repository, and why `./scripts/confluence-drawio-mcp.sh` mounts the active workspace at the same absolute path for local Docker stdio mode.
 
 If you do not want to expose the file path to the container, use:
 

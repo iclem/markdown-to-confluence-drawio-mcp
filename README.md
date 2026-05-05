@@ -35,7 +35,22 @@ Build the local image:
 make image-mcp
 ```
 
-Start the HTTP MCP server:
+Run local Docker stdio from the workspace you want mounted:
+
+```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+If your MCP client launches the server from another directory, point the helper at the workspace explicitly:
+
+```bash
+MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
+  ./scripts/confluence-drawio-mcp.sh
+```
+
+This helper launches `docker run` with the active workspace bind-mounted at the same absolute path, so file-based Markdown tools can read project-local documents without a separately managed HTTP server.
+
+Or start the HTTP MCP server:
 
 ```bash
 docker run --rm \
@@ -59,7 +74,9 @@ The container binds to `0.0.0.0`, while local MCP clients should still connect t
 
 This keeps the default host exposure local-only. If you intentionally want LAN access, change the published port binding to `-p 3000:3000`.
 
-Register the server in your agent at:
+Use local Docker stdio when your agent can spawn command-based MCP servers directly. Use HTTP when you want one long-lived container that multiple local clients can share.
+
+For HTTP mode, register the server in your agent at:
 
 ```text
 http://127.0.0.1:3000/mcp

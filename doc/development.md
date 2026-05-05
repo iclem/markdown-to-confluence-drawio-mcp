@@ -264,14 +264,26 @@ The same Docker image now also exposes the draw.io + Confluence MCP server in tw
 ### Run the MCP server from the packaged image
 
 ```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+This helper runs the default `mcp` entrypoint in the packaged image with the current workspace bind-mounted at the same absolute path.
+
+The raw Docker equivalent is:
+
+```bash
 docker run --rm -i \
+  -v "$PWD":"$PWD" \
+  -w "$PWD" \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
+  -e CONFLUENCE_BEARER_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local
 ```
-
-This runs the default `mcp` entrypoint in the packaged image.
 
 ### Run the MCP server over HTTP
 
