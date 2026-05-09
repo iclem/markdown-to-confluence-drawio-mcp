@@ -22,7 +22,8 @@ function isFileNotFoundError(error: unknown): error is NodeJS.ErrnoException {
 export function formatMarkdownFileNotFoundMessage(markdownFile: string): string {
   return (
     `Markdown file not found: ${markdownFile}. The path must exist on the MCP server host. ` +
-    `If the server runs in Docker, bind-mount the host directory into the container at the same absolute path, ` +
+    `If the server runs in Docker, bind-mount the active workspace into the container at the same absolute path ` +
+    `(local Docker stdio mode depends on this workspace-aware mount), ` +
     `or use the non-file Markdown tool and send the Markdown content directly.`
   );
 }

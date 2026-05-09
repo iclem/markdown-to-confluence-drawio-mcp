@@ -20,7 +20,11 @@ describe("mcp app", () => {
     expect(() => createPublisherService()).not.toThrow();
   });
 
-  it("adds a bind-mount hint when a markdown file is missing", () => {
-    expect(formatMarkdownFileNotFoundMessage("/missing/file.md")).toContain("bind-mount");
+  it("adds a workspace bind-mount hint when a markdown file is missing", () => {
+    const message = formatMarkdownFileNotFoundMessage("/missing/file.md");
+
+    expect(message).toContain("bind-mount");
+    expect(message).toContain("active workspace");
+    expect(message).toContain("local Docker stdio");
   });
 });

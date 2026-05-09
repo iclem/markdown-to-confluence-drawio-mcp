@@ -35,7 +35,53 @@ Build the local image:
 make image-mcp
 ```
 
-Start the HTTP MCP server:
+Export one supported Confluence credential set before starting the server.
+
+Direct publisher variables with email + API token:
+
+```bash
+export CONFLUENCE_BASE_URL="https://your-site.atlassian.net"
+export CONFLUENCE_EMAIL="you@example.com"
+export CONFLUENCE_API_TOKEN="..."
+```
+
+or direct publisher variables with a bearer token:
+
+```bash
+export CONFLUENCE_BASE_URL="https://your-site.atlassian.net"
+export CONFLUENCE_BEARER_TOKEN="..."
+```
+
+or the Copilot-style fallback variables:
+
+```bash
+export COPILOT_MCP_CONFLUENCE_URL="https://your-site.atlassian.net"
+export COPILOT_MCP_CONFLUENCE_USERNAME="you@example.com"
+export COPILOT_MCP_CONFLUENCE_API_TOKEN="..."
+```
+
+The local stdio helper forwards both the direct `CONFLUENCE_*` variables and the Copilot-style fallback variables into the container.
+
+Run local Docker stdio from the workspace you want mounted:
+
+```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+If your MCP client launches the server from another directory, point the helper at the workspace explicitly:
+
+```bash
+MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
+  ./scripts/confluence-drawio-mcp.sh
+```
+
+This helper launches `docker run` with the active workspace bind-mounted at the same absolute path, so file-based Markdown tools can read project-local documents without a separately managed HTTP server.
+
+If you are using only a published image from a registry and do not have a local checkout, see `doc/user-manual.md` for direct MCP configuration examples that run `docker` without the repository helper script.
+
+Or start the HTTP MCP server:
+
+The HTTP example below shows the Copilot-style variables because they are common in MCP setups, but the direct `CONFLUENCE_*` variables work there too.
 
 ```bash
 docker run --rm \
@@ -59,7 +105,9 @@ The container binds to `0.0.0.0`, while local MCP clients should still connect t
 
 This keeps the default host exposure local-only. If you intentionally want LAN access, change the published port binding to `-p 3000:3000`.
 
-Register the server in your agent at:
+Use local Docker stdio when your agent can spawn command-based MCP servers directly. Use HTTP when you want one long-lived container that multiple local clients can share.
+
+For HTTP mode, register the server in your agent at:
 
 ```text
 http://127.0.0.1:3000/mcp

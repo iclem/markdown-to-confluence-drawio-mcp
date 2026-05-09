@@ -87,15 +87,50 @@ http://127.0.0.1:3000/healthz
 
 ### Stdio MCP
 
-Stdio is still useful when the host agent wants to spawn the container directly.
+Stdio is useful when the host agent wants to spawn the container directly against the current workspace.
+
+From the workspace you want mounted:
+
+```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+If the helper is launched from another directory, set the workspace explicitly:
+
+```bash
+MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
+  ./scripts/confluence-drawio-mcp.sh
+```
+
+The helper launches the packaged image through `docker run` with:
+
+- the active workspace bind-mounted at the same absolute path
+- the container working directory set to that workspace path
+- both direct `CONFLUENCE_*` variables and Copilot-style fallback variables forwarded into the container
+
+The raw Docker equivalent is:
 
 ```bash
 docker run --rm -i \
+  -v "$PWD":"$PWD" \
+  -w "$PWD" \
   -e CONFLUENCE_BASE_URL \
   -e CONFLUENCE_EMAIL \
   -e CONFLUENCE_API_TOKEN \
+  -e CONFLUENCE_BEARER_TOKEN \
+  -e COPILOT_MCP_CONFLUENCE_URL \
+  -e COPILOT_MCP_CONFLUENCE_USERNAME \
+  -e COPILOT_MCP_CONFLUENCE_API_TOKEN \
   markdown-to-confluence-drawio-mcp:local mcp
 ```
+
+Use local Docker stdio when your agent prefers command-based MCP registration scoped to the current workspace. Use HTTP when you want a long-lived shared container and URL-based registration.
+
+If you do **not** keep a local checkout and instead pull the packaged image from a registry, you can still use stdio mode by registering a direct `docker run` command. The examples below assume:
+
+- macOS or Linux
+- the MCP client launches the command with its cwd set to the workspace that should be mounted
+- you replace `<your-registry>/markdown-to-confluence-drawio-mcp:<tag>` with your published image reference
 
 ## Provider installation
 
@@ -128,6 +163,25 @@ For GitHub Copilot cloud agents, start from the repository-root example:
 
 That checked-in example uses the packaged Docker image with stdio transport.
 
+For local project-scoped stdio use, register `./scripts/confluence-drawio-mcp.sh` as the command from the workspace you want mounted.
+
+If you prefer a registry-only setup without a local checkout, a direct stdio registration can use `docker run` through the shell:
+
+```json
+{
+  "mcpServers": {
+    "markdown-to-confluence-drawio-mcp": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+      ]
+    }
+  }
+}
+```
+
 ### Codex
 
 Typical global config file:
@@ -147,6 +201,17 @@ If you prefer per-project setup, place the same block in:
 
 ```text
 .codex/config.toml
+```
+
+Registry-only stdio example:
+
+```toml
+[mcp_servers.markdown-to-confluence-drawio-mcp]
+command = "sh"
+args = [
+  "-c",
+  "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+]
 ```
 
 ### Claude Code / Claude Desktop
@@ -172,6 +237,23 @@ Common locations:
   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
   - Linux: `~/.config/Claude/claude_desktop_config.json`
   - Windows: `%APPDATA%\\Claude\\claude_desktop_config.json`
+
+Registry-only stdio example:
+
+```json
+{
+  "mcpServers": {
+    "markdown-to-confluence-drawio-mcp": {
+      "type": "stdio",
+      "command": "sh",
+      "args": [
+        "-c",
+        "docker run --rm -i -v \"$PWD\":\"$PWD\" -w \"$PWD\" -e CONFLUENCE_BASE_URL -e CONFLUENCE_EMAIL -e CONFLUENCE_API_TOKEN -e CONFLUENCE_BEARER_TOKEN -e COPILOT_MCP_CONFLUENCE_URL -e COPILOT_MCP_CONFLUENCE_USERNAME -e COPILOT_MCP_CONFLUENCE_API_TOKEN <your-registry>/markdown-to-confluence-drawio-mcp:<tag> mcp"
+      ]
+    }
+  }
+}
+```
 
 ### Gemini CLI
 
@@ -209,7 +291,7 @@ Recommended rule:
 - bind-mount the directory containing the Markdown file into the container
 - preserve the same absolute path inside the container when practical
 
-That is why the HTTP startup examples mount `"$PWD":"$PWD"` when the document lives under the current repository.
+That is why the HTTP startup examples mount `"$PWD":"$PWD"` when the document lives under the current repository, and why `./scripts/confluence-drawio-mcp.sh` mounts the active workspace at the same absolute path for local Docker stdio mode.
 
 If you do not want to expose the file path to the container, use:
 

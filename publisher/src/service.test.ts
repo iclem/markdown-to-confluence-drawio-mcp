@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -586,6 +586,47 @@ describe("DrawioPublisherService", () => {
       expect(result.fallbackBlocks).toBe(0);
       expect(client.pageUpdateMessages).toContain("Publish ddd-context-map.md");
     } finally {
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(diagramDir, { recursive: true, force: true });
+    }
+  });
+
+  it("creates a sibling page from a relative markdown file path in the current workspace", async () => {
+    const { client, pageId } = createExistingWidgetFixture();
+    const dir = mkdtempSync(join(tmpdir(), "drawio-markdown-relative-"));
+    const docsDir = join(dir, "docs");
+    mkdirSync(docsDir);
+    writeFileSync(join(docsDir, "ddd-context-map.md"), "# Domain Context Map\n\n```mermaid\nflowchart TD\nA-->B\n```\n");
+    const { dir: diagramDir, drawioPath, previewPath } = createTempDiagramFiles("ddd-context-map-01.drawio", 900, 500);
+    const service = new DrawioPublisherService(
+      client as never,
+      async () => ({
+        mermaidPath: `${diagramDir}/input.mermaid`,
+        drawioPath,
+        previewPath,
+        cleanup: async () => undefined,
+      }),
+    );
+    const cwd = process.cwd();
+
+    try {
+      process.chdir(dir);
+
+      const result = await service.createPageFromMarkdownFile({
+        title: "Domain Context Map",
+        markdownFile: "docs/ddd-context-map.md",
+        siblingPageId: pageId,
+        spaceKey: "~user",
+      });
+
+      expect(result.page.id).toBe("created-page");
+      expect(result.source).toBe("ddd-context-map.md");
+      expect(result.mermaidBlocks).toBe(1);
+      expect(result.convertedBlocks).toBe(1);
+      expect(result.fallbackBlocks).toBe(0);
+      expect(client.pageUpdateMessages).toContain("Publish ddd-context-map.md");
+    } finally {
+      process.chdir(cwd);
       rmSync(dir, { recursive: true, force: true });
       rmSync(diagramDir, { recursive: true, force: true });
     }

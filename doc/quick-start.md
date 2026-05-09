@@ -32,7 +32,26 @@ From the repository root:
 make image-mcp
 ```
 
-## 3. Start the HTTP MCP server
+## 3. Optional: use local Docker stdio instead of HTTP
+
+If your agent can spawn command-based stdio MCP servers, run the helper from the workspace you want mounted:
+
+```bash
+./scripts/confluence-drawio-mcp.sh
+```
+
+If the helper is launched from another directory, override the workspace path explicitly:
+
+```bash
+MARKDOWN_TO_CONFLUENCE_DRAWIO_MCP_WORKSPACE=/absolute/path/to/your-project \
+  ./scripts/confluence-drawio-mcp.sh
+```
+
+This uses `docker run` with the workspace bind-mounted at the same absolute path, which keeps file-based Markdown publishing compatible with the existing server-side path handling.
+
+Use this mode when your MCP client prefers command-based stdio registration. Otherwise continue with HTTP below.
+
+## 4. Start the HTTP MCP server
 
 If you want to publish from a file path, mount the directory containing that file into the container at the **same absolute path**.
 
@@ -72,9 +91,11 @@ Health check:
 curl http://127.0.0.1:3000/healthz
 ```
 
-## 4. Register the MCP server in your agent
+## 5. Register the MCP server in your agent
 
 Use the HTTP configuration examples in `doc/user-manual.md` for Copilot, Codex, Claude, or Gemini.
+
+If your client supports command-based stdio registration, register `./scripts/confluence-drawio-mcp.sh` instead and run it from the workspace you want mounted.
 
 The common endpoint is:
 
@@ -82,7 +103,7 @@ The common endpoint is:
 http://127.0.0.1:3000/mcp
 ```
 
-## 5. Do a first publish
+## 6. Do a first publish
 
 Recommended sample file in your own repository:
 
@@ -110,7 +131,7 @@ Example request shape:
 }
 ```
 
-## 6. Use the right tool for the job
+## 7. Use the right tool for the job
 
 - `create_confluence_page_from_markdown_file` for large Markdown files already on disk
 - `create_confluence_page_from_markdown` when the Markdown is generated in memory
@@ -124,5 +145,5 @@ Example request shape:
 
 - **Authentication error:** check `CONFLUENCE_*` or `COPILOT_MCP_CONFLUENCE_*`
 - **HTTP tool call fails on `/mcp`:** make sure the server was started with `mcp-http`, not `mcp`
-- **File-based publish cannot see the Markdown file:** bind-mount the host path into the container at the same absolute path
+- **File-based publish cannot see the Markdown file:** bind-mount the workspace into the container at the same absolute path; `./scripts/confluence-drawio-mcp.sh` does this automatically for local Docker stdio mode
 - **A widget name already exists on the page:** change `diagramName` or update the existing widget instead of creating a new one
